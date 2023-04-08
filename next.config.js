@@ -7,10 +7,9 @@ const nextConfig = {
 
   webpack(config, { isServer, dev }) {
     config.experiments = {
-      asyncWebAssembly: true,
+      asyncWebAssembly: false,
       layers: true,
     };
-
     return config;
   },
 };
