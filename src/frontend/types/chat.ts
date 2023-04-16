@@ -8,10 +8,9 @@ export interface Message {
 export type Role = 'assistant' | 'user';
 
 export interface ChatBody {
-  model: OpenAIModel;
+  to: string;
   messages: Message[];
-  key: string;
-  prompt: string;
+  from: string;
 }
 
 export interface Conversation {

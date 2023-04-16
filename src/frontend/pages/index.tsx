@@ -21,13 +21,16 @@ import {
 import { saveFolders } from '@/utils/app/folders';
 import { exportData, importData } from '@/utils/app/importExport';
 import { savePrompts } from '@/utils/app/prompts';
+import { AppBar, Button, Toolbar, Typography, Box, createTheme } from '@mui/material';
 import { IconArrowBarLeft, IconArrowBarRight } from '@tabler/icons-react';
-import { GetServerSideProps } from 'next';
+import { GetServerSideProps, GetStaticProps } from 'next';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import Head from 'next/head';
 import { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import Models from '../components/Model/model';
+import { ThemeProvider } from '@emotion/react';
 
 interface HomeProps {
   serverSideApiKeyIsSet: boolean;
@@ -91,14 +94,13 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet }) => {
       setMessageIsStreaming(true);
 
       const chatBody: ChatBody = {
-        model: updatedConversation.model,
         messages: updatedConversation.messages,
-        key: apiKey,
-        prompt: updatedConversation.prompt,
+        to: 'davinci',
+        from: 'bigmiao',
       };
 
       const controller = new AbortController();
-      const response = await fetch('/api/chat', {
+      const response = await fetch('/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -211,54 +213,6 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet }) => {
       setMessageIsStreaming(false);
     }
   };
-
-  // FETCH MODELS ----------------------------------------------
-
-  const fetchModels = async (key: string) => {
-    const error = {
-      title: t('Error fetching models.'),
-      code: null,
-      messageLines: [
-        t(
-          'Make sure your OpenAI API key is set in the bottom left of the sidebar.',
-        ),
-        t('If you completed this step, OpenAI may be experiencing issues.'),
-      ],
-    } as ErrorMessage;
-
-    const response = await fetch('/api/models', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        key,
-      }),
-    });
-
-    if (!response.ok) {
-      try {
-        const data = await response.json();
-        Object.assign(error, {
-          code: data.error?.code,
-          messageLines: [data.error?.message],
-        });
-      } catch (e) {}
-      setModelError(error);
-      return;
-    }
-
-    const data = await response.json();
-
-    if (!data) {
-      setModelError(error);
-      return;
-    }
-
-    setModels(data);
-    setModelError(null);
-  };
-
   // BASIC HANDLERS --------------------------------------------
 
   const handleLightMode = (mode: 'dark' | 'light') => {
@@ -538,26 +492,12 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet }) => {
     }
   }, [selectedConversation]);
 
-  useEffect(() => {
-    if (apiKey) {
-      fetchModels(apiKey);
-    }
-  }, [apiKey]);
-
   // ON LOAD --------------------------------------------
 
   useEffect(() => {
     const theme = localStorage.getItem('theme');
     if (theme) {
       setLightMode(theme as 'dark' | 'light');
-    }
-
-    const apiKey = localStorage.getItem('apiKey');
-    if (apiKey) {
-      setApiKey(apiKey);
-      fetchModels(apiKey);
-    } else if (serverSideApiKeyIsSet) {
-      fetchModels('');
     }
 
     if (window.innerWidth < 640) {
@@ -614,8 +554,16 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet }) => {
     }
   }, [serverSideApiKeyIsSet]);
 
+  const tabs = ['Chat', 'Model']
+  const [selectedTab, setSelectedTab] = useState(tabs[0]);
+  const theme = createTheme({
+    palette: {
+      mode: 'dark',
+    },
+  });
   return (
     <>
+    <ThemeProvider theme={theme}>
       <Head>
         <title>Chatbot UI</title>
         <meta name="description" content="ChatGPT but better." />
@@ -625,113 +573,70 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet }) => {
         />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      {selectedConversation && (
-        <main
-          className={`flex h-screen w-screen flex-col text-sm text-white dark:text-white ${lightMode}`}
+      
+      <main
+          className={`text-sm text-white dark:text-white ${lightMode}`}
         >
-          <div className="fixed top-0 w-full sm:hidden">
-            <Navbar
-              selectedConversation={selectedConversation}
-              onNewConversation={handleNewConversation}
-            />
-          </div>
-
-          <div className="flex h-full w-full pt-[48px] sm:pt-0">
-            {showSidebar ? (
-              <div>
-                <Chatbar
-                  loading={messageIsStreaming}
-                  conversations={conversations}
-                  lightMode={lightMode}
-                  selectedConversation={selectedConversation}
-                  apiKey={apiKey}
-                  folders={folders}
-                  onToggleLightMode={handleLightMode}
-                  onCreateFolder={(name) => handleCreateFolder(name, 'chat')}
-                  onDeleteFolder={handleDeleteFolder}
-                  onUpdateFolder={handleUpdateFolder}
-                  onNewConversation={handleNewConversation}
-                  onSelectConversation={handleSelectConversation}
-                  onDeleteConversation={handleDeleteConversation}
-                  onToggleSidebar={handleToggleChatbar}
-                  onUpdateConversation={handleUpdateConversation}
-                  onApiKeyChange={handleApiKeyChange}
-                  onClearConversations={handleClearConversations}
-                  onExportConversations={handleExportData}
-                  onImportConversations={handleImportConversations}
-                />
-
-                <IconArrowBarLeft
-                  className="fixed top-5 left-[270px] z-50 h-7 w-7 cursor-pointer hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:left-[270px] sm:h-8 sm:w-8 sm:text-neutral-700"
-                  onClick={handleToggleChatbar}
-                />
-
-                <div
-                  onClick={handleToggleChatbar}
-                  className="absolute top-0 left-0 z-10 h-full w-full bg-black opacity-70 sm:hidden"
-                ></div>
-              </div>
-            ) : (
-              <IconArrowBarRight
-                className="fixed top-2.5 left-4 z-50 h-7 w-7 cursor-pointer text-white hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:left-4 sm:h-8 sm:w-8 sm:text-neutral-700"
-                onClick={handleToggleChatbar}
-              />
-            )}
-
-            <div className="flex flex-1">
-              <Chat
-                conversation={selectedConversation}
-                messageIsStreaming={messageIsStreaming}
-                apiKey={apiKey}
-                serverSideApiKeyIsSet={serverSideApiKeyIsSet}
-                modelError={modelError}
-                models={models}
-                loading={loading}
-                prompts={prompts}
-                onSend={handleSend}
-                onUpdateConversation={handleUpdateConversation}
-                onEditMessage={handleEditMessage}
-                stopConversationRef={stopConversationRef}
-              />
-            </div>
-
-            {showPromptbar ? (
-              <div>
-                <Promptbar
-                  prompts={prompts}
-                  folders={folders}
-                  onToggleSidebar={handleTogglePromptbar}
-                  onCreatePrompt={handleCreatePrompt}
-                  onUpdatePrompt={handleUpdatePrompt}
-                  onDeletePrompt={handleDeletePrompt}
-                  onCreateFolder={(name) => handleCreateFolder(name, 'prompt')}
-                  onDeleteFolder={handleDeleteFolder}
-                  onUpdateFolder={handleUpdateFolder}
-                />
-                <IconArrowBarRight
-                  className="fixed top-5 right-[270px] z-50 h-7 w-7 cursor-pointer hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:right-[270px] sm:h-8 sm:w-8 sm:text-neutral-700"
-                  onClick={handleTogglePromptbar}
-                />
-                <div
-                  onClick={handleTogglePromptbar}
-                  className="absolute top-0 left-0 z-10 h-full w-full bg-black opacity-70 sm:hidden"
-                ></div>
-              </div>
-            ) : (
-              <IconArrowBarLeft
-                className="fixed top-2.5 right-4 z-50 h-7 w-7 cursor-pointer text-white hover:text-gray-400 dark:text-white dark:hover:text-gray-300 sm:top-0.5 sm:right-4 sm:h-8 sm:w-8 sm:text-neutral-700"
-                onClick={handleTogglePromptbar}
-              />
-            )}
-          </div>
-        </main>
+      <AppBar position="static">
+        <Toolbar variant="regular">
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}
+          >
+            CHATBOT
+          </Typography>
+          <Box sx={{ display: { xs: 'none', sm: 'block', position: 'flex'} }}>
+            <Button sx={{ color: '#fff' }} onClick={() => setSelectedTab('Chat')} >Chat</Button>
+            <Button sx={{ color: '#fff' }} onClick = {() => setSelectedTab('Model')}>Model</Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
+      <Box
+        sx={{
+          width: "100%",
+          height: "100%",
+          padding: 5}}>
+      {selectedTab == 'Chat' && selectedConversation && (
+        <Box
+          sx={{
+            // buttom align
+          }}>
+          <Chat
+            conversation={selectedConversation}
+            messageIsStreaming={messageIsStreaming}
+            models={models}
+            loading={loading}
+            prompts={prompts}
+            onSend={handleSend}
+            onUpdateConversation={handleUpdateConversation}
+            onEditMessage={handleEditMessage}
+            stopConversationRef={stopConversationRef}
+          />
+        </Box>
       )}
+      {selectedTab == 'Model' && (
+        <div className="flex h-full w-full pt-[48px] sm:pt-0">
+          <Models
+            modelConfigs = {
+              [
+                {avatar: "model 1", alias: "model 1", apiKey: "", description: "model 1"},
+                {avatar: "model 2", alias: "model 2", apiKey: "", description: "model 2"},
+                {avatar: "model 3", alias: "model 3", apiKey: "", description: "model 3"},
+                {avatar: "model 4", alias: "model 4", apiKey: "", description: "model 4"},
+              ]}
+            onModelConfigsChange={(modelConfigs) => {console.log(modelConfigs)}}/>
+        </div>
+      )}
+        </Box>
+        </main>
+      </ThemeProvider>
     </>
   );
 };
 export default Home;
 
-export const getServerSideProps: GetServerSideProps = async ({ locale }) => {
+export const getStaticProps: GetStaticProps = async ({ locale }) => {
   return {
     props: {
       serverSideApiKeyIsSet: !!process.env.OPENAI_API_KEY,

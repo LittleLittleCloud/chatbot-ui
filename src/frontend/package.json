@@ -4,16 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && next export -o ../backend/wwwroot",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write ."
   },
   "dependencies": {
     "@dqbd/tiktoken": "^1.0.2",
+    "@emotion/react": "^11.10.6",
+    "@emotion/styled": "^11.10.6",
+    "@mui/material": "^5.12.0",
     "@tabler/icons-react": "^2.9.0",
     "eventsource-parser": "^0.1.0",
     "i18next": "^22.4.13",
+    "mui": "^0.0.1",
     "next": "13.2.4",
     "next-i18next": "^13.2.2",
     "openai": "^3.2.1",

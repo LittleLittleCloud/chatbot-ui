@@ -26,10 +26,7 @@ import { SystemPrompt } from './SystemPrompt';
 interface Props {
   conversation: Conversation;
   models: OpenAIModel[];
-  apiKey: string;
-  serverSideApiKeyIsSet: boolean;
   messageIsStreaming: boolean;
-  modelError: ErrorMessage | null;
   loading: boolean;
   prompts: Prompt[];
   onSend: (message: Message, deleteCount?: number) => void;
@@ -45,10 +42,7 @@ export const Chat: FC<Props> = memo(
   ({
     conversation,
     models,
-    apiKey,
-    serverSideApiKeyIsSet,
     messageIsStreaming,
-    modelError,
     loading,
     prompts,
     onSend,
@@ -135,39 +129,8 @@ export const Chat: FC<Props> = memo(
     }, [messagesEndRef]);
 
     return (
-      <div className="overflow-none relative flex-1 bg-white dark:bg-[#343541]">
-        {!(apiKey || serverSideApiKeyIsSet) ? (
-          <div className="mx-auto flex h-full w-[300px] flex-col justify-center space-y-6 sm:w-[500px]">
-            <div className="mx-auto mb-5 text-gray-800 dark:text-gray-100">
-              <IconKey size={36} />
-            </div>
-            <div className="text-center text-2xl font-semibold text-gray-800 dark:text-gray-100">
-              {t('OpenAI API Key Required')}
-            </div>
-            <div className="text-center text-gray-500 dark:text-gray-400">
-              <div className="mb-2">
-                {t(
-                  'Please set your OpenAI API key in the bottom left of the sidebar.',
-                )}
-              </div>
-              <div>
-                {t(
-                  "If you don't have an OpenAI API key, you can get one here: ",
-                )}
-                <a
-                  href="https://platform.openai.com/account/api-keys"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-500 hover:underline"
-                >
-                  openai.com
-                </a>
-              </div>
-            </div>
-          </div>
-        ) : modelError ? (
-          <ErrorMessageDiv error={modelError} />
-        ) : (
+      <div className="overflow-none relative bg-white dark:bg-[#343541]">
+        {(
           <>
             <div
               className="max-h-full overflow-x-hidden"

@@ -35,3 +35,11 @@ html {
 pre:has(div.codeblock) {
   padding: 0;
 }
+
+input {
+  background: transparent;
+  color: #fff;
+  flex: 1;
+  overflow:hidden;
+  overflow: ellipsis;
+}
