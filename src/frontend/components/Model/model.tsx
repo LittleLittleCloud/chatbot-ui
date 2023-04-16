@@ -41,34 +41,28 @@ const ModelConfigPanel: React.FC<ModelConfigProps> = ({modelConfig, onModelConfi
         setApiKey(modelConfig.apiKey);
     }, [modelConfig]);
     
-    const modelChangedHandler = () => onModelConfigChanged({avatar, alias, description, apiKey});
+    const modelChangedHandler = (modelConfig: ModelConfig) => onModelConfigChanged(modelConfig);
 
-    console.log(modelConfig);
     return (
         <div>
             <Stack spacing={2}>
-                <TextField fullWidth label="Avatar" value={avatar} onChange={(e) => { setAvatar(e.target.value); modelChangedHandler();}}/>
-                <TextField fullWidth label="Alias" value={alias} onChange={(e) => { setAlias(e.target.value); modelChangedHandler();}}/>
-                <TextField fullWidth label="Description" value={description} onChange={(e) => { setDescription(e.target.value); modelChangedHandler();}}/>
-                <TextField type="password" fullWidth label="ApiKey" value={apiKey} onChange={(e) => {setApiKey(e.target.value); modelChangedHandler();}}/>
+                <TextField fullWidth label="Avatar" value={avatar} onChange={(e) => { setAvatar(e.target.value);modelChangedHandler({ avatar: e.target.value, alias, description, apiKey})}}/>
+                <TextField fullWidth label="Alias" value={alias} onChange={(e) => { setAlias(e.target.value); modelChangedHandler({ avatar, alias: e.target.value, description, apiKey});}}/>
+                <TextField fullWidth label="Description" value={description} onChange={(e) => { setDescription(e.target.value); modelChangedHandler({ avatar, alias, description: e.target.value, apiKey});}}/>
+                <TextField type="password" fullWidth label="ApiKey" value={apiKey} onChange={(e) => {setApiKey(e.target.value); modelChangedHandler({ avatar, alias, description, apiKey: e.target.value});}}/>
             </Stack>
         </div>
     )
 }
 
 const Models: React.FC<ModelProps> = ({modelConfigs, onModelConfigsChange}) => {
-    const modelConfigsUseStates = modelConfigs.map((modelConfig) => useState(modelConfig));
-    const modelConfigsStates = modelConfigsUseStates.map((modelConfigUseState) => modelConfigUseState[0]);
-    const modelConfigsSetStates = modelConfigsUseStates.map((modelConfigUseState) => modelConfigUseState[1]);
+    const [modelConfigState, setModelConfigState] = useState(modelConfigs);
     const [isEditingModelIndex, setIsEditingModelIndex] = useState(-1);
     const [editingModel, setEditingModel] = useState<ModelConfig>();
     useEffect(() => {
-        setIsEditingModelIndex(isEditingModelIndex);
-        modelConfigsStates.forEach((modelConfig, i) => modelConfigsSetStates[i](modelConfig));
-        if (isEditingModelIndex >= 0){
-            setEditingModel(modelConfigsStates[isEditingModelIndex]);
-        }
-    }, [isEditingModelIndex, modelConfigsStates]);
+        setIsEditingModelIndex(-1);
+        setModelConfigState(modelConfigs);
+    }, [modelConfigs]);
 
     return (
         <Stack
@@ -88,8 +82,9 @@ const Models: React.FC<ModelProps> = ({modelConfigs, onModelConfigsChange}) => {
                     flexWrap: "wrap",
                     alignContent: "flex-start",
                     alignItems: "top"}}>
-                {modelConfigsStates.map((modelConfig, i) =>
+                {modelConfigState.map((modelConfig, i) =>
                 <Box
+                    key={i}
                     sx={{
                         padding: 2,
                         maxWidth: 200,
@@ -104,7 +99,7 @@ const Models: React.FC<ModelProps> = ({modelConfigs, onModelConfigsChange}) => {
                             <Typography>{modelConfig.description}</Typography>
                         </Box>
                         <Stack direction="row" spacing={3} useFlexGap>
-                            <Button variant="outlined" onClick={() => {setIsEditingModelIndex(i); setEditingModel(modelConfigsStates[i])}} >Edit</Button>
+                            <Button variant="outlined" onClick={() => {setIsEditingModelIndex(i); setEditingModel(modelConfig)}} >Edit</Button>
                             <Button variant="outlined" onClick={() => {setIsEditingModelIndex(-1)}} >Delete</Button>
                         </Stack>
                     </Stack>
@@ -114,9 +109,9 @@ const Models: React.FC<ModelProps> = ({modelConfigs, onModelConfigsChange}) => {
             {isEditingModelIndex >= 0 && editingModel &&
                 <Container>
                     <Stack direction="column" spacing={2} useFlexGap>
-                        <Typography variant="h4">Editing {modelConfigsStates[isEditingModelIndex].alias}</Typography>
-                        <ModelConfigPanel modelConfig={modelConfigsStates[isEditingModelIndex]} onModelConfigChanged={(_config) => setEditingModel(_config)}/>
-                        <Button variant="outlined" onClick={() => { modelConfigsSetStates[isEditingModelIndex](editingModel); setIsEditingModelIndex(-1);} }>Save</Button>
+                        <Typography variant="h4">Editing {modelConfigState[isEditingModelIndex].alias}</Typography>
+                        <ModelConfigPanel modelConfig={editingModel} onModelConfigChanged={(_config) => {console.log(_config); setEditingModel(_config)}}/>
+                        <Button variant="outlined" onClick={() => { setModelConfigState(modelConfigState.map((m, i) => i == isEditingModelIndex? editingModel : m)); setIsEditingModelIndex(-1);} }>Save</Button>
                         <Button variant="outlined" onClick={() => setIsEditingModelIndex(-1) }>Cancel</Button>
                     </Stack>
                 </Container>
