@@ -29,11 +29,15 @@ import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import Head from 'next/head';
 import { useEffect, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import Models from '../components/Model/model';
+import Models, { IModelConfig } from '../components/Model/model';
 import { ThemeProvider } from '@emotion/react';
+import { IModelMetaData } from '@/model/type';
+import { BaseLLM, LLM } from "langchain/dist/llms/base";
+import { GPT_35_TURBO } from '@/model/azure/GPT';
 
 interface HomeProps {
   serverSideApiKeyIsSet: boolean;
+  models: IModelConfig[];
 }
 
 const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet }) => {
@@ -620,10 +624,7 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet }) => {
           <Models
             modelConfigs = {
               [
-                {avatar: "model 1", alias: "model 1", apiKey: "", description: "model 1"},
-                {avatar: "model 2", alias: "model 2", apiKey: "", description: "model 2"},
-                {avatar: "model 3", alias: "model 3", apiKey: "", description: "model 3"},
-                {avatar: "model 4", alias: "model 4", apiKey: "", description: "model 4"},
+                {avatar: "model 1", alias: "model 1", model: new GPT_35_TURBO({ apiKey: "93d506090d1e4b6bbc83088b957298a7", resourceName: "rg-asod-2", deploymentID: "chat" })},
               ]}
             onModelConfigsChange={(modelConfigs) => {console.log(modelConfigs)}}/>
         </div>
