@@ -7,6 +7,7 @@
     "build": "next build && next export -o ../backend/wwwroot",
     "start": "next start",
     "lint": "next lint",
+    "test": "jest --config test/jest.config.js",
     "format": "prettier --write ."
   },
   "dependencies": {
