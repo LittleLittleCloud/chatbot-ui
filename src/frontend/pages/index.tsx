@@ -1,4 +1,4 @@
-import { Chat } from '@/components/Chat/Chat';
+import { Chat, IGroup } from '@/components/Chat/Chat';
 import { Chatbar } from '@/components/Chatbar/Chatbar';
 import { Navbar } from '@/components/Mobile/Navbar';
 import { Promptbar } from '@/components/Promptbar/Promptbar';
@@ -33,14 +33,15 @@ import Models, { IModelConfig } from '../components/Model/model';
 import { ThemeProvider } from '@emotion/react';
 import { IModelMetaData } from '@/model/type';
 import { BaseLLM, LLM } from "langchain/dist/llms/base";
-import { GPT_35_TURBO } from '@/model/azure/GPT';
+import { GPT_35_TURBO, TextDavinci003 } from '@/model/azure/GPT';
 
 interface HomeProps {
   serverSideApiKeyIsSet: boolean;
-  models: IModelConfig[];
+  modelConfigs: IModelConfig[];
+  groups: IGroup[];
 }
 
-const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet }) => {
+const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups }) => {
   const { t } = useTranslation('chat');
 
   // STATE ----------------------------------------------
@@ -566,7 +567,6 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet }) => {
     },
   });
   return (
-    <>
     <ThemeProvider theme={theme}>
       <Head>
         <title>Chatbot UI</title>
@@ -581,58 +581,51 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet }) => {
       <main
           className={`text-sm text-white dark:text-white ${lightMode}`}
         >
-      <AppBar position="static">
-        <Toolbar variant="regular">
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}
-          >
-            CHATBOT
-          </Typography>
-          <Box sx={{ display: { xs: 'none', sm: 'block', position: 'flex'} }}>
-            <Button sx={{ color: '#fff' }} onClick={() => setSelectedTab('Chat')} >Chat</Button>
-            <Button sx={{ color: '#fff' }} onClick = {() => setSelectedTab('Model')}>Model</Button>
-          </Box>
-        </Toolbar>
-      </AppBar>
       <Box
         sx={{
+          display: 'flex',
+          flexDirection: "column",
           width: "100%",
-          height: "100%",
-          padding: 5}}>
-      {selectedTab == 'Chat' && selectedConversation && (
+          height: "100vh",
+          maxHeight: "100vh"}}>
         <Box
           sx={{
-            // buttom align
+            Height: "10%",
           }}>
+          <AppBar position="static">
+          <Toolbar variant="regular">
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}>
+              CHATBOT
+            </Typography>
+            <Box sx={{ display: { xs: 'none', sm: 'block', position: 'flex'} }}>
+              <Button sx={{ color: '#fff' }} onClick={() => setSelectedTab('Chat')} >Chat</Button>
+              <Button sx={{ color: '#fff' }} onClick = {() => setSelectedTab('Model')}>Model</Button>
+            </Box>
+            </Toolbar>
+            </AppBar>
+        </Box>
+      <Box
+        sx={{
+          flexGrow: 1,
+          height: "90%",
+        }}>
+        {selectedTab == 'Chat' && selectedConversation && (
           <Chat
-            conversation={selectedConversation}
-            messageIsStreaming={messageIsStreaming}
-            models={models}
-            loading={loading}
-            prompts={prompts}
-            onSend={handleSend}
-            onUpdateConversation={handleUpdateConversation}
-            onEditMessage={handleEditMessage}
-            stopConversationRef={stopConversationRef}
+            groups={groups}
           />
-        </Box>
-      )}
-      {selectedTab == 'Model' && (
-        <div className="flex h-full w-full pt-[48px] sm:pt-0">
+        )}
+        {selectedTab == 'Model' && (
           <Models
-            modelConfigs = {
-              [
-                {avatar: "model 1", alias: "model 1", model: new GPT_35_TURBO({ apiKey: "93d506090d1e4b6bbc83088b957298a7", resourceName: "rg-asod-2", deploymentID: "chat" })},
-              ]}
+            modelConfigs = {modelConfigs}
             onModelConfigsChange={(modelConfigs) => {console.log(modelConfigs)}}/>
-        </div>
-      )}
-        </Box>
-        </main>
+        )}
+      </Box>
+      </Box>
+      </main>
       </ThemeProvider>
-    </>
   );
 };
 export default Home;
@@ -641,6 +634,55 @@ export const getStaticProps: GetStaticProps = async ({ locale }) => {
   return {
     props: {
       serverSideApiKeyIsSet: !!process.env.OPENAI_API_KEY,
+      modelConfigs:
+        [
+          {avatar: "model 1", alias: "model 1", model: { apiKey: "fc7e07b8e96d4c5e89add9d9cfcb14ee", resourceName: "cog-2cmrcuejmcrre", deploymentID: "chat" }},
+          {avatar: "model 2", alias: "model 2", model: { apiKey: "fc7e07b8e96d4c5e89add9d9cfcb14ee", resourceName: "cog-2cmrcuejmcrre", deploymentID: "davinci"}},
+        ],
+      groups: [
+        {
+          name: "group 1",
+          agents: [
+            {
+              "alias": "jarvis"
+            },
+            {
+              "alias": "siri"
+            }
+          ],
+          conversation:[
+            {
+              from: "__user",
+              content: "hello"
+            },
+            {
+              from: "jarvis",
+              content: "how can I help you"
+            }
+          ]
+        },
+        {
+          name: "group 2",
+          agents: [
+            {
+              "alias": "jarvis"
+            },
+            {
+              "alias": "siri"
+            }
+          ],
+          conversation:[
+            {
+              from: "__user",
+              content: "what's date todassssssssssssssssssssssssssssssssssssssssssssssssssssy"
+            },
+            {
+              from: "jarvis",
+              content: "today is 12/12/2021sssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+            }
+          ]
+        }
+      ],
       ...(await serverSideTranslations(locale ?? 'en', [
         'common',
         'chat',

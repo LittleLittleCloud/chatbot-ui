@@ -14,6 +14,8 @@ import {
 } from 'react';
 import { PromptList } from './PromptList';
 import { VariableModal } from './VariableModal';
+import { Box, Button, TextField } from '@mui/material';
+import { IMessage } from './Chat';
 
 interface Props {
   messageIsStreaming: boolean;
@@ -21,7 +23,7 @@ interface Props {
   conversationIsEmpty: boolean;
   messages: Message[];
   prompts: Prompt[];
-  onSend: (message: Message) => void;
+  onSend: (message: IMessage) => void;
   onRegenerate: () => void;
   stopConversationRef: MutableRefObject<boolean>;
   textareaRef: MutableRefObject<HTMLTextAreaElement | null>;
@@ -29,13 +31,8 @@ interface Props {
 
 export const ChatInput: FC<Props> = ({
   messageIsStreaming,
-  model,
-  conversationIsEmpty,
-  messages,
   prompts,
   onSend,
-  onRegenerate,
-  stopConversationRef,
   textareaRef,
 }) => {
   const { t } = useTranslation('chat');
@@ -50,13 +47,13 @@ export const ChatInput: FC<Props> = ({
 
   const promptListRef = useRef<HTMLUListElement | null>(null);
 
-  const filteredPrompts = prompts.filter((prompt) =>
+  const filteredPrompts = prompts?.filter((prompt) =>
     prompt.name.toLowerCase().includes(promptInputValue.toLowerCase()),
   );
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
-    const maxLength = model.id === OpenAIModelID.GPT_3_5 ? 12000 : 24000;
+    const maxLength = 12000;
 
     if (value.length > maxLength) {
       alert(
@@ -82,19 +79,12 @@ export const ChatInput: FC<Props> = ({
       return;
     }
 
-    onSend({ role: 'user', content });
+    onSend({ from: '__user', content, mimeType: 'text/plain' });
     setContent('');
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {
       textareaRef.current.blur();
     }
-  };
-
-  const handleStopConversation = () => {
-    stopConversationRef.current = true;
-    setTimeout(() => {
-      stopConversationRef.current = false;
-    }, 1000);
   };
 
   const isMobile = () => {
@@ -233,96 +223,35 @@ export const ChatInput: FC<Props> = ({
   }, []);
 
   return (
-    <div className="left-0 w-full border-transparent bg-gradient-to-b from-transparent via-white to-white pt-6 dark:border-white/20 dark:via-[#343541] dark:to-[#343541] md:pt-2">
-      <div className="mx-2 mt-4 flex flex-row gap-3 last:mb-2 md:mx-4 md:mt-[52px] md:last:mb-6 lg:mx-auto lg:max-w-3xl">
-        {messageIsStreaming && (
-          <button
-            className="top-2 left-0 right-0 mx-auto mt-2 w-fit rounded border border-neutral-200 bg-white py-2 px-4 text-black hover:opacity-50 dark:border-neutral-600 dark:bg-[#343541] dark:text-white md:top-0"
-            onClick={handleStopConversation}
-          >
-            <IconPlayerStop size={16} className="mb-[2px] inline-block" />{' '}
-            {t('Stop Generating')}
-          </button>
-        )}
-
-        {!messageIsStreaming && !conversationIsEmpty && (
-          <button
-            className="absolute left-0 right-0 mx-auto mt-2 w-fit rounded border border-neutral-200 bg-white py-2 px-4 text-black hover:opacity-50 dark:border-neutral-600 dark:bg-[#343541] dark:text-white md:top-0"
-            onClick={onRegenerate}
-          >
-            <IconRepeat size={16} className="mb-[2px] inline-block" />{' '}
-            {t('Regenerate response')}
-          </button>
-        )}
-
-        <div className="relative mx-2 flex w-full flex-grow flex-col rounded-md border border-black/10 bg-white py-2 shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:border-gray-900/50 dark:bg-[#40414F] dark:text-white dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] sm:mx-4 md:py-3 md:pl-4">
-          <textarea
-            ref={textareaRef}
-            className="m-0 w-full resize-none border-0 bg-transparent p-0 pr-8 pl-2 text-black outline-none focus:ring-0 focus-visible:ring-0 dark:bg-transparent dark:text-white md:pl-0"
-            style={{
-              resize: 'none',
-              bottom: `${textareaRef?.current?.scrollHeight}px`,
-              maxHeight: '400px',
-              overflow: `${
-                textareaRef.current && textareaRef.current.scrollHeight > 400
-                  ? 'auto'
-                  : 'hidden'
-              }`,
+        <Box
+          sx={{
+            display: 'flex',
+            width: '100%',
+            flexDirection: 'row',
+            gap: 2,
+          }}>
+          <TextField
+            sx = {{
+              flexGrow: 1,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: '0.5rem',
+                '&:hover fieldset': {
+                  borderColor: 'primary.main',
+                },
+              },
             }}
-            placeholder={
-              t('Type a message or type "/" to select a prompt...') || ''
-            }
-            value={content}
-            rows={1}
-            onCompositionStart={() => setIsTyping(true)}
-            onCompositionEnd={() => setIsTyping(false)}
+            ref={textareaRef}
+            multiline={true}
+            placeholder={t('Type a message') || ''}
             onChange={handleChange}
-            onKeyDown={handleKeyDown}
-          />
-
-          <button
-            className="absolute right-3 rounded-sm p-1 text-neutral-800 hover:bg-neutral-200 hover:text-neutral-900 focus:outline-none dark:bg-opacity-50 dark:text-neutral-100 dark:hover:text-neutral-200"
-            onClick={handleSend}
-          >
-            <IconSend size={16} className="opacity-60" />
-          </button>
-
-          {showPromptList && prompts.length > 0 && (
-            <div className="absolute bottom-12 w-full">
-              <PromptList
-                activePromptIndex={activePromptIndex}
-                prompts={filteredPrompts}
-                onSelect={handleInitModal}
-                onMouseOver={setActivePromptIndex}
-                promptListRef={promptListRef}
-              />
-            </div>
-          )}
-
-          {isModalVisible && (
-            <VariableModal
-              prompt={prompts[activePromptIndex]}
-              variables={variables}
-              onSubmit={handleSubmit}
-              onClose={() => setIsModalVisible(false)}
+            value={content}
             />
-          )}
-        </div>
-      </div>
-      <div className="px-3 pt-2 pb-3 text-center text-[12px] text-black/50 dark:text-white/50 md:px-4 md:pt-3 md:pb-6">
-        <a
-          href="https://github.com/mckaywrigley/chatbot-ui"
-          target="_blank"
-          rel="noreferrer"
-          className="underline"
-        >
-          ChatBot UI
-        </a>
-        .{' '}
-        {t(
-          "Chatbot UI is an advanced chatbot kit for OpenAI's chat models aiming to mimic ChatGPT's interface and functionality.",
-        )}
-      </div>
-    </div>
+
+          <Button
+            variant="outlined"
+            onClick={handleSend}>
+            <IconSend className="opacity-60" />
+          </Button>
+        </Box>
   );
 };

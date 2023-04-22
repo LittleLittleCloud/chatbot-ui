@@ -15,7 +15,6 @@ interface IGPTBaseModelConfiguration {
     stop?: string[],
     presencePenalty?: number,
     frequencyPenalty?: number,
-    bestOf?: number,
 }
 
 interface IGPTModelOutput{
@@ -47,7 +46,6 @@ abstract class GPTBase extends LLM implements IGPTBaseModelConfiguration{
     stop?: string[];
     presencePenalty?: number = 0;
     frequencyPenalty?: number = 0;
-    bestOf?: number = 1;
 
     constructor(fields: Partial<IGPTBaseModelConfiguration> & BaseLLMParams){
         super(fields ?? {});
@@ -63,12 +61,11 @@ abstract class GPTBase extends LLM implements IGPTBaseModelConfiguration{
         this.stop = fields.stop ?? undefined;
         this.presencePenalty = fields.presencePenalty ?? 0;
         this.frequencyPenalty = fields.frequencyPenalty ?? 0;
-        this.bestOf = fields.bestOf ?? 1;
 
         if(!this.apiKey) throw new Error("apiKey is required");
         if(!this.resourceName) throw new Error("resourceName is required");
         if(!this.deploymentID) throw new Error("deploymentID is required");
-        if(this.bestOf != undefined && this.stream == true) throw new Error("bestOf cannot be used with stream");
+        if(this.stream == true) throw new Error("bestOf cannot be used with stream");
     }
 
     async _call(prompt: string, stop?: string[]): Promise<string>{
@@ -78,7 +75,7 @@ abstract class GPTBase extends LLM implements IGPTBaseModelConfiguration{
             method: "POST",
             headers:{
                 "Content-Type": "application/json",
-                "Authorization": "api-key " + this.apiKey,
+                "api-key": this.apiKey,
             },
             body: JSON.stringify({
                 prompt: prompt,
@@ -87,7 +84,6 @@ abstract class GPTBase extends LLM implements IGPTBaseModelConfiguration{
                 top_p: this.topP,
                 presence_penalty: this.presencePenalty,
                 frequency_penalty: this.frequencyPenalty,
-                best_of: this.bestOf,
                 stream: this.stream,
                 stop: stop ?? this.stop,
         })});
@@ -106,7 +102,7 @@ class GPT_35_TURBO extends GPTBase implements IGPT35TurboModelConfiguration{
     description = "The ChatGPT model (gpt-35-turbo) is a language model designed for conversational interfaces and the model behaves differently than previous GPT-3 models. Previous models were text-in and text-out, meaning they accepted a prompt string and returned a completion to append to the prompt. However, the ChatGPT model is conversation-in and message-out. The model expects a prompt string formatted in a specific chat-like transcript format, and returns a completion that represents a model-written message in the chat."
     id = "azure.gpt-35-turbo";
 
-    constructor(fields: Partial<IGPT35TurboModelConfiguration> & BaseLLMParams & IModelMetaData){
+    constructor(fields: Partial<IGPT35TurboModelConfiguration>){
         super(fields ?? {});
         this.description = fields.description ?? this.description;
     }
@@ -116,5 +112,22 @@ class GPT_35_TURBO extends GPTBase implements IGPT35TurboModelConfiguration{
     }
 }
 
-export { GPT_35_TURBO };
-export type { IGPT35TurboModelConfiguration };
+interface ITextDavinci003Conifguration extends IGPTBaseModelConfiguration, IModelMetaData{
+}
+
+class TextDavinci003 extends GPTBase implements ITextDavinci003Conifguration{
+    description = `Davinci is the most capable model and can perform any task the other models can perform, often with less instruction. For applications requiring deep understanding of the content, like summarization for a specific audience and creative content generation, Davinci produces the best results. The increased capabilities provided by Davinci require more compute resources, so Davinci costs more and isn't as fast as other models.
+    Another area where Davinci excels is in understanding the intent of text. Davinci is excellent at solving many kinds of logic problems and explaining the motives of characters. Davinci has been able to solve some of the most challenging AI problems involving cause and effect.`
+    id = "azure.text-davinci-003";
+
+    constructor(fields: Partial<ITextDavinci003Conifguration>){
+        super(fields ?? {});
+        this.description = fields.description ?? this.description;
+    }
+
+    _llmType(): string {
+        return this.id;
+    }
+}
+
+export { GPT_35_TURBO, TextDavinci003 };

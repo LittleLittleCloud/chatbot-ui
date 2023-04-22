@@ -22,6 +22,7 @@ import { ChatMessage } from './ChatMessage';
 import { ErrorMessageDiv } from './ErrorMessageDiv';
 import { ModelSelect } from './ModelSelect';
 import { SystemPrompt } from './SystemPrompt';
+import { Box, Container, List, ListItem, Stack, Typography } from '@mui/material';
 
 interface Props {
   conversation: Conversation;
@@ -38,20 +39,50 @@ interface Props {
   stopConversationRef: MutableRefObject<boolean>;
 }
 
-export const Chat: FC<Props> = memo(
+interface IMessage{
+  from: string | '__user',
+  mimeType: 'text/plain' | 'text/markdown',
+  content: string | Blob
+}
+
+interface IAgent{
+  alias: string,
+  description: string,
+  prompt: string,
+  avatar: string,
+}
+
+interface IGroup{
+  name: string,
+  agents: IAgent[],
+  conversation: IMessage[],
+}
+
+const GroupPanel: FC<{groups: IGroup[], onGroupSelected: (group: IGroup) => void}> = ({groups, onGroupSelected}) => {
+  return (
+    <List
+      sx={{
+        height: '100%',
+        overflow: 'auto',
+      }}>
+      {groups.map((group, index) => (
+        <ListItem onClick={() => onGroupSelected(group)}>
+          <Typography key={index} variant="h6" sx={{ mt: 2, mb: 1 }}>
+          {group.name}
+        </Typography>
+        </ListItem>
+      ))}
+    </List>
+  )
+}
+
+export const Chat: FC<{groups: IGroup[]}> = memo(
   ({
-    conversation,
-    models,
-    messageIsStreaming,
-    loading,
-    prompts,
-    onSend,
-    onUpdateConversation,
-    onEditMessage,
-    stopConversationRef,
+    groups,
   }) => {
     const { t } = useTranslation('chat');
-    const [currentMessage, setCurrentMessage] = useState<Message>();
+    const [currentGroup, setCurrentGroup] = useState<IGroup>();
+    const [currentConversation, setCurrentConversation] = useState<IMessage[]>([]);
     const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
     const [showSettings, setShowSettings] = useState<boolean>(false);
 
@@ -84,25 +115,12 @@ export const Chat: FC<Props> = memo(
       setShowSettings(!showSettings);
     };
 
-    const onClearAll = () => {
-      if (confirm(t<string>('Are you sure you want to clear all messages?'))) {
-        onUpdateConversation(conversation, { key: 'messages', value: [] });
-      }
-    };
-
     const scrollDown = () => {
       if (autoScrollEnabled) {
         messagesEndRef.current?.scrollIntoView(true);
       }
     };
     const throttledScrollDown = throttle(scrollDown, 250);
-
-    useEffect(() => {
-      throttledScrollDown();
-      setCurrentMessage(
-        conversation.messages[conversation.messages.length - 2],
-      );
-    }, [conversation.messages, throttledScrollDown]);
 
     useEffect(() => {
       const observer = new IntersectionObserver(
@@ -129,126 +147,77 @@ export const Chat: FC<Props> = memo(
     }, [messagesEndRef]);
 
     return (
-      <div className="overflow-none relative bg-white dark:bg-[#343541]">
-        {(
-          <>
-            <div
-              className="max-h-full overflow-x-hidden"
-              ref={chatContainerRef}
-            >
-              {conversation.messages.length === 0 ? (
-                <>
-                  <div className="mx-auto flex w-[350px] flex-col space-y-10 pt-12 sm:w-[600px]">
-                    <div className="text-center text-3xl font-semibold text-gray-800 dark:text-gray-100">
-                      {models.length === 0 ? (
-                        <div>
-                          <Spinner size="16px" className="mx-auto" />
-                        </div>
-                      ) : (
-                        'Chatbot UI'
-                      )}
-                    </div>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "row",
+          width: "100%",
+          height: "100%",
+        }}>
+        <Box
+          sx={{
+            width: "20%",
+            height: "100%",
+          }}>
+          <GroupPanel
+            groups={groups}
+            onGroupSelected={(group) =>
+            {
+              setCurrentGroup(group);
+              setCurrentConversation(group.conversation);
+            }} />
+        </Box>
+        <Box
+          sx={{
+            backgroundColor: "background.default",
+            display: "flex",
+            flexGrow: 1,
+            height: "100%",
+            flexDirection: "column",
+          }}>
+          {currentConversation && 
+            <List
+              sx={{
+                flexGrow: 1,
+                maxHeight: "100%",
+                overflow: "auto",
+                height: "80",
+              }}>
 
-                    {models.length > 0 && (
-                      <div className="flex h-full flex-col space-y-4 rounded-lg border border-neutral-200 p-4 dark:border-neutral-600">
-                        <ModelSelect
-                          model={conversation.model}
-                          models={models}
-                          onModelChange={(model) =>
-                            onUpdateConversation(conversation, {
-                              key: 'model',
-                              value: model,
-                            })
-                          }
-                        />
-
-                        <SystemPrompt
-                          conversation={conversation}
-                          prompts={prompts}
-                          onChangePrompt={(prompt) =>
-                            onUpdateConversation(conversation, {
-                              key: 'prompt',
-                              value: prompt,
-                            })
-                          }
-                        />
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex justify-center border border-b-neutral-300 bg-neutral-100 py-2 text-sm text-neutral-500 dark:border-none dark:bg-[#444654] dark:text-neutral-200">
-                    {t('Model')}: {conversation.model.name}
-                    <IconSettings
-                      className="ml-2 cursor-pointer hover:opacity-50"
-                      onClick={handleSettings}
-                      size={18}
-                    />
-                    <IconClearAll
-                      className="ml-2 cursor-pointer hover:opacity-50"
-                      onClick={onClearAll}
-                      size={18}
-                    />
-                  </div>
-                  {showSettings && (
-                    <div className="flex flex-col space-y-10 md:mx-auto md:max-w-xl md:gap-6 md:py-3 md:pt-6 lg:max-w-2xl lg:px-0 xl:max-w-3xl">
-                      <div className="flex h-full flex-col space-y-4 border-b border-neutral-200 p-4 dark:border-neutral-600 md:rounded-lg md:border">
-                        <ModelSelect
-                          model={conversation.model}
-                          models={models}
-                          onModelChange={(model) =>
-                            onUpdateConversation(conversation, {
-                              key: 'model',
-                              value: model,
-                            })
-                          }
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {conversation.messages.map((message, index) => (
-                    <ChatMessage
-                      key={index}
-                      message={message}
-                      messageIndex={index}
-                      onEditMessage={onEditMessage}
-                    />
-                  ))}
-
-                  {loading && <ChatLoader />}
-
-                  <div
-                    className="h-[162px] bg-white dark:bg-[#343541]"
-                    ref={messagesEndRef}
+            {currentConversation.map((message, index) => (
+              <Box
+                sx={{
+                  marginTop: 2,
+                  marginRight: 5,
+                  marginLeft: 5,
+                }}>
+                <ChatMessage
+                  key={index}
+                  message={message}
                   />
-                </>
-              )}
-            </div>
-
+                </Box>
+            ))}
+            <div
+              ref={messagesEndRef} />
+            </List>
+          }
+          <Box
+            sx={{
+              padding: 5,
+            }}>
             <ChatInput
-              stopConversationRef={stopConversationRef}
-              textareaRef={textareaRef}
-              messageIsStreaming={messageIsStreaming}
-              conversationIsEmpty={conversation.messages.length === 0}
-              messages={conversation.messages}
-              model={conversation.model}
-              prompts={prompts}
-              onSend={(message) => {
-                setCurrentMessage(message);
-                onSend(message);
-              }}
-              onRegenerate={() => {
-                if (currentMessage) {
-                  onSend(currentMessage, 2);
-                }
-              }}
-            />
-          </>
-        )}
-      </div>
+            textareaRef={textareaRef}
+            messageIsStreaming={false}
+            onSend={(message) => {
+              setCurrentConversation([...currentConversation, message]);
+            }} />
+          </Box>
+        </Box>
+      </Box>
+      
     );
   },
 );
 Chat.displayName = 'Chat';
+
+export type { IGroup, IMessage, IAgent }
