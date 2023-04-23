@@ -7,7 +7,7 @@
     "build": "next build && next export -o ../backend/wwwroot",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest --config test/jest.config.js",
+    "test": "jest --config jest.config.js",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -19,6 +19,7 @@
     "@tabler/icons-react": "^2.9.0",
     "eventsource-parser": "^0.1.0",
     "i18next": "^22.4.13",
+    "inversify": "^6.0.1",
     "langchain": "^0.0.56",
     "mui": "^0.0.1",
     "next": "13.2.4",
@@ -29,6 +30,7 @@
     "react-i18next": "^12.2.0",
     "react-markdown": "^8.0.5",
     "react-syntax-highlighter": "^15.5.0",
+    "reflect-metadata": "^0.1.13",
     "rehype-mathjax": "^4.0.2",
     "remark-gfm": "^3.0.1",
     "remark-math": "^5.1.1",
@@ -36,6 +38,9 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.9",
+    "@types/jest": "^29.5.1",
+    "jest": "^29.5.0",
+    "ts-jest": "^29.1.0",
     "@types/node": "18.15.0",
     "@types/react": "18.0.28",
     "@types/react-dom": "18.0.11",

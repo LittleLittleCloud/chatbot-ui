@@ -34,7 +34,7 @@ import { ThemeProvider } from '@emotion/react';
 import { IModelMetaData } from '@/model/type';
 import { BaseLLM, LLM } from "langchain/dist/llms/base";
 import { GPT_35_TURBO, TextDavinci003 } from '@/model/azure/GPT';
-
+import '@/utils/app/setup';
 interface HomeProps {
   serverSideApiKeyIsSet: boolean;
   modelConfigs: IModelConfig[];
@@ -636,8 +636,8 @@ export const getStaticProps: GetStaticProps = async ({ locale }) => {
       serverSideApiKeyIsSet: !!process.env.OPENAI_API_KEY,
       modelConfigs:
         [
-          {avatar: "model 1", alias: "model 1", model: { apiKey: "fc7e07b8e96d4c5e89add9d9cfcb14ee", resourceName: "cog-2cmrcuejmcrre", deploymentID: "chat" }},
-          {avatar: "model 2", alias: "model 2", model: { apiKey: "fc7e07b8e96d4c5e89add9d9cfcb14ee", resourceName: "cog-2cmrcuejmcrre", deploymentID: "davinci"}},
+          {avatar: "model 1", alias: "model 1", model: { apiKey: "fc7e07b8e96d4c5e89add9d9cfcb14ee", resourceName: "cog-2cmrcuejmcrre", deploymentID: "chat", id: "azure.gpt-35-turbo" }},
+          {avatar: "model 2", alias: "model 2", model: { apiKey: "fc7e07b8e96d4c5e89add9d9cfcb14ee", resourceName: "cog-2cmrcuejmcrre", deploymentID: "davinci", id: "azure.text-davinci-003"}},
         ],
       groups: [
         {
