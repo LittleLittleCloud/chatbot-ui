@@ -4,8 +4,13 @@ import { Container } from "inversify";
 import { LLM } from "langchain/llms/base";
 
 const llmContainer: Container = new Container();
+const availableLLMs: string[] = [];
 
 export function registerProvider<T extends IModelMetaData>(id: string, provider: (model: T) => LLM){
+    if(!availableLLMs.includes(id)){
+        availableLLMs.push(id);
+    }
+
     llmContainer.bind<(model: T) => LLM>(id).toConstantValue(provider);
 }
 
@@ -14,7 +19,7 @@ export function getProvider<T extends IModelMetaData>(model: T): (model: T) => L
 }
 
 export function hasProvider(model: IModelMetaData){
-    return llmContainer.isBound(model.id);
+    return availableLLMs.includes(model.id);
 }
 
 export function createLLM(model: IModelMetaData){
@@ -23,4 +28,8 @@ export function createLLM(model: IModelMetaData){
     }
 
     return getProvider(model)(model);
+}
+
+export function getAvailableLLMs(): string[]{
+    return availableLLMs;
 }

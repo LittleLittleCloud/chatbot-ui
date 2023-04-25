@@ -6,5 +6,7 @@ import { AzureGPT35TurboConfig, AzureTextDavinci003Config } from "./azure/Config
 // register LLM provider
 registerProvider("azure.text-davinci-003", (model: ITextDavinci003) => new TextDavinci003(model));
 registerProvider("azure.gpt-35-turbo", (model: IGPT35Turbo) => new GPT_35_TURBO(model));
-registerConfigPanelProvider<TextDavinci003>("azure.text-davinci-003", (config, onConfigChanged) => <AzureTextDavinci003Config model={config} onModelConfigChanged={onConfigChanged}/>);
-registerConfigPanelProvider<GPT_35_TURBO>("azure.gpt-35-turbo", (config, onConfigChanged) => <AzureGPT35TurboConfig model={config} onModelConfigChanged={onConfigChanged}/>);
+registerConfigPanelProvider<ITextDavinci003>("azure.text-davinci-003",
+    (config, onConfigChange) => AzureTextDavinci003Config(config, onConfigChange));
+registerConfigPanelProvider<IGPT35Turbo>("azure.gpt-35-turbo",
+    (config, onConfigChange) => AzureGPT35TurboConfig(config, onConfigChange));

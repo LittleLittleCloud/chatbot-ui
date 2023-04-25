@@ -1,6 +1,6 @@
 interface IModelMetaData{
     id: string;
-    description: string;
+    description?: string;
 }
 
 export type {IModelMetaData}

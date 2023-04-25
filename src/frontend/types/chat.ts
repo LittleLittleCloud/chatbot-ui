@@ -21,3 +21,9 @@ export interface Conversation {
   prompt: string;
   folderId: string | null;
 }
+
+export interface IMessage{
+  from: string | '__user',
+  mimeType: 'text/plain' | 'text/markdown',
+  content: string | Blob
+}

@@ -1,4 +1,4 @@
-import { Chat, IGroup } from '@/components/Chat/Chat';
+import { Chat, IAgent, IGroup } from '@/components/Chat/Chat';
 import { Chatbar } from '@/components/Chatbar/Chatbar';
 import { Navbar } from '@/components/Mobile/Navbar';
 import { Promptbar } from '@/components/Promptbar/Promptbar';
@@ -35,13 +35,15 @@ import { IModelMetaData } from '@/model/type';
 import { BaseLLM, LLM } from "langchain/dist/llms/base";
 import { GPT_35_TURBO, TextDavinci003 } from '@/model/azure/GPT';
 import '@/utils/app/setup';
+import { AgentPage } from '@/components/Agent/agent';
 interface HomeProps {
   serverSideApiKeyIsSet: boolean;
   modelConfigs: IModelConfig[];
   groups: IGroup[];
+  agents: IAgent[];
 }
 
-const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups }) => {
+const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups, agents }) => {
   const { t } = useTranslation('chat');
 
   // STATE ----------------------------------------------
@@ -559,7 +561,7 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups
     }
   }, [serverSideApiKeyIsSet]);
 
-  const tabs = ['Chat', 'Model']
+  const tabs = ['Chat', 'Agent', 'Model']
   const [selectedTab, setSelectedTab] = useState(tabs[0]);
   const theme = createTheme({
     palette: {
@@ -601,8 +603,13 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups
               CHATBOT
             </Typography>
             <Box sx={{ display: { xs: 'none', sm: 'block', position: 'flex'} }}>
-              <Button sx={{ color: '#fff' }} onClick={() => setSelectedTab('Chat')} >Chat</Button>
-              <Button sx={{ color: '#fff' }} onClick = {() => setSelectedTab('Model')}>Model</Button>
+              {
+                tabs.map((tab) => {
+                  return (
+                    <Button sx={{ color: '#fff' }} onClick={() => setSelectedTab(tab)} >{tab}</Button>
+                  )
+                })
+              }
             </Box>
             </Toolbar>
             </AppBar>
@@ -615,7 +622,11 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups
         {selectedTab == 'Chat' && selectedConversation && (
           <Chat
             groups={groups}
+            agents={agents}
           />
+        )}
+        {selectedTab == 'Agent' && (
+          <AgentPage agents={agents} />
         )}
         {selectedTab == 'Model' && (
           <Models
@@ -643,12 +654,7 @@ export const getStaticProps: GetStaticProps = async ({ locale }) => {
         {
           name: "group 1",
           agents: [
-            {
-              "alias": "jarvis"
-            },
-            {
-              "alias": "siri"
-            }
+            'jarvis',
           ],
           conversation:[
             {
@@ -664,12 +670,7 @@ export const getStaticProps: GetStaticProps = async ({ locale }) => {
         {
           name: "group 2",
           agents: [
-            {
-              "alias": "jarvis"
-            },
-            {
-              "alias": "siri"
-            }
+            'siri',
           ],
           conversation:[
             {
@@ -677,10 +678,38 @@ export const getStaticProps: GetStaticProps = async ({ locale }) => {
               content: "what's date todassssssssssssssssssssssssssssssssssssssssssssssssssssy"
             },
             {
-              from: "jarvis",
+              from: "siri",
               content: "today is 12/12/2021sssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
             }
           ]
+        }
+      ],
+      agents: [
+        {
+          "alias": "jarvis",
+          "id": "agent.chat",
+          "prefixPrompt": "Your name is jarvis, you are a chatbot in a chat room. Try to be helpful and friendly. Don't reply anything if new message is from you.",
+          "suffixPrompt": "chat history: \n {history} \n new message \n {from}: {content} \n your response:",
+          "llm": {
+            "id": "azure.text-davinci-003",
+            "apiKey": "fc7e07b8e96d4c5e89add9d9cfcb14ee",
+            "resourceName": "cog-2cmrcuejmcrre",
+            "deploymentID": "davinci",
+            "temperature": 0.7,
+            "maxTokens": 256,
+          }
+        },
+        {
+          "alias": "siri",
+          "id": "agent.chat",
+          "llm": {
+            "id": "azure.gpt-35-turbo",
+            "apiKey": "fc7e07b8e96d4c5e89add9d9cfcb14ee",
+            "resourceName": "cog-2cmrcuejmcrre",
+            "deploymentID": "chat",
+            "temperature": 1,
+            "maxTokens": 1024,
+          }
         }
       ],
       ...(await serverSideTranslations(locale ?? 'en', [

@@ -57,7 +57,7 @@ abstract class GPTBase extends LLM implements IGPTBaseModelConfiguration{
         this.resourceName = fields.resourceName ?? undefined;
         this.deploymentID = fields.deploymentID ?? undefined;
         this.apiVersion = fields.apiVersion ?? "2022-12-01";
-        this.maxTokens = fields.maxTokens ?? 16;
+        this.maxTokens = fields.maxTokens ?? 128;
         this.topP = fields.topP ?? 1;
         
         this.stream = fields.stream ?? false;
@@ -90,6 +90,8 @@ abstract class GPTBase extends LLM implements IGPTBaseModelConfiguration{
                 stream: this.stream,
                 stop: stop ?? this.stop,
         })});
+
+        console.log(prompt);
 
         if(response.status != 200) throw new Error("Azure GPT API call failed with status code " + response.status);
         var modelOutput: IGPTModelOutput = await response.json();

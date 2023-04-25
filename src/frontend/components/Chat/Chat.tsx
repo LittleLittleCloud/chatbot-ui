@@ -1,4 +1,4 @@
-import { Conversation, Message } from '@/types/chat';
+import { Conversation, IMessage, Message } from '@/types/chat';
 import { KeyValuePair } from '@/types/data';
 import { ErrorMessage } from '@/types/error';
 import { OpenAIModel } from '@/types/openai';
@@ -23,6 +23,9 @@ import { ErrorMessageDiv } from './ErrorMessageDiv';
 import { ModelSelect } from './ModelSelect';
 import { SystemPrompt } from './SystemPrompt';
 import { Box, Container, List, ListItem, Stack, Typography } from '@mui/material';
+import { IAgent } from '@/types/agent';
+import { AgentExecutor } from 'langchain/agents';
+import { getAgentExecutorProvider } from '@/utils/app/agentProvider';
 
 interface Props {
   conversation: Conversation;
@@ -39,22 +42,9 @@ interface Props {
   stopConversationRef: MutableRefObject<boolean>;
 }
 
-interface IMessage{
-  from: string | '__user',
-  mimeType: 'text/plain' | 'text/markdown',
-  content: string | Blob
-}
-
-interface IAgent{
-  alias: string,
-  description: string,
-  prompt: string,
-  avatar: string,
-}
-
 interface IGroup{
   name: string,
-  agents: IAgent[],
+  agents: string[],
   conversation: IMessage[],
 }
 
@@ -76,20 +66,22 @@ const GroupPanel: FC<{groups: IGroup[], onGroupSelected: (group: IGroup) => void
   )
 }
 
-export const Chat: FC<{groups: IGroup[]}> = memo(
+export const Chat: FC<{groups: IGroup[], agents: IAgent[]}> = memo(
   ({
     groups,
+    agents,
   }) => {
     const { t } = useTranslation('chat');
     const [currentGroup, setCurrentGroup] = useState<IGroup>();
     const [currentConversation, setCurrentConversation] = useState<IMessage[]>([]);
     const [autoScrollEnabled, setAutoScrollEnabled] = useState(true);
     const [showSettings, setShowSettings] = useState<boolean>(false);
-
+    const [agentExecutors, setAgentExecutors] = useState<AgentExecutor[]>([]);
+    const [newMessage, setNewMessage] = useState<IMessage>();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-
+    const [availableAgents, setAvailableAgents] = useState<IAgent[]>(agents);
     const scrollToBottom = useCallback(() => {
       if (autoScrollEnabled) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -121,6 +113,22 @@ export const Chat: FC<{groups: IGroup[]}> = memo(
       }
     };
     const throttledScrollDown = throttle(scrollDown, 250);
+
+    useEffect(() => {
+      if(newMessage){
+        setCurrentConversation([...currentConversation, newMessage]);
+        agentExecutors.forEach(async (executor, i) => {
+          if(newMessage.from != currentGroup?.agents[i]){
+            var response = await executor.call({'from': newMessage.from, 'content': newMessage.content});
+            var content = response['output'];
+            if(content?.length > 0){
+              var responseMessage: IMessage = { from: currentGroup?.agents[i]!, mimeType: 'text/plain', content: content};
+              setNewMessage(responseMessage);
+            }
+          }
+        })
+      }
+    }, [newMessage]);
 
     useEffect(() => {
       const observer = new IntersectionObserver(
@@ -164,6 +172,10 @@ export const Chat: FC<{groups: IGroup[]}> = memo(
             onGroupSelected={(group) =>
             {
               setCurrentGroup(group);
+              var agents = group.agents.map(agent => availableAgents.find(a => a.alias === agent));
+              var agentExecutorProviders = agents.map(agent => getAgentExecutorProvider(agent!.id));
+              var agentExecutors = agentExecutorProviders.map((provider, i) => provider(agents[i]!, currentConversation));
+              setAgentExecutors(agentExecutors);
               setCurrentConversation(group.conversation);
             }} />
         </Box>
@@ -206,11 +218,11 @@ export const Chat: FC<{groups: IGroup[]}> = memo(
               padding: 5,
             }}>
             <ChatInput
-            textareaRef={textareaRef}
-            messageIsStreaming={false}
-            onSend={(message) => {
-              setCurrentConversation([...currentConversation, message]);
-            }} />
+              textareaRef={textareaRef}
+              messageIsStreaming={false}
+              onSend={(message) => {
+                setNewMessage(message);
+              }} />
           </Box>
         </Box>
       </Box>
@@ -220,4 +232,4 @@ export const Chat: FC<{groups: IGroup[]}> = memo(
 );
 Chat.displayName = 'Chat';
 
-export type { IGroup, IMessage, IAgent }
+export type { IGroup, IAgent }
