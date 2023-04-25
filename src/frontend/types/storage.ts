@@ -1,18 +1,16 @@
-import { Conversation } from './chat';
-import { Folder } from './folder';
-import { Prompt } from './prompt';
+import { IGroup } from '@/components/Chat/Chat';
+import { IAgent } from './agent';
+import { IModelMetaData } from '@/model/type';
 
-// keep track of local storage schema
-export interface LocalStorage {
-  apiKey: string;
-  conversationHistory: Conversation[];
-  selectedConversation: Conversation;
-  theme: 'light' | 'dark';
-  // added folders (3/23/23)
-  folders: Folder[];
-  // added prompts (3/26/23)
-  prompts: Prompt[];
-  // added showChatbar and showPromptbar (3/26/23)
-  showChatbar: boolean;
-  showPromptbar: boolean;
+export interface IUISettings extends IRecord{
+}
+
+export type availableValueTypes = string | number | boolean | Blob | undefined | IRecord;
+export interface IRecord extends Record<string, availableValueTypes | availableValueTypes[]>{
+  id: string;
+}
+
+export interface IStorage extends IRecord{
+  agents: IAgent[];
+  groups: IGroup[];
 }

@@ -26,6 +26,7 @@ import { Box, Container, List, ListItem, Stack, Typography } from '@mui/material
 import { IAgent } from '@/types/agent';
 import { AgentExecutor } from 'langchain/agents';
 import { getAgentExecutorProvider } from '@/utils/app/agentProvider';
+import { IRecord } from '@/types/storage';
 
 interface Props {
   conversation: Conversation;
@@ -42,7 +43,7 @@ interface Props {
   stopConversationRef: MutableRefObject<boolean>;
 }
 
-interface IGroup{
+interface IGroup extends IRecord{
   name: string,
   agents: string[],
   conversation: IMessage[],
@@ -56,7 +57,7 @@ const GroupPanel: FC<{groups: IGroup[], onGroupSelected: (group: IGroup) => void
         overflow: 'auto',
       }}>
       {groups.map((group, index) => (
-        <ListItem onClick={() => onGroupSelected(group)}>
+        <ListItem key={index} onClick={() => onGroupSelected(group)}>
           <Typography key={index} variant="h6" sx={{ mt: 2, mb: 1 }}>
           {group.name}
         </Typography>
@@ -66,10 +67,11 @@ const GroupPanel: FC<{groups: IGroup[], onGroupSelected: (group: IGroup) => void
   )
 }
 
-export const Chat: FC<{groups: IGroup[], agents: IAgent[]}> = memo(
+export const Chat: FC<{groups: IGroup[], agents: IAgent[], onGroupsChange: (groups: IGroup[]) => void}> = memo(
   ({
     groups,
     agents,
+    onGroupsChange,
   }) => {
     const { t } = useTranslation('chat');
     const [currentGroup, setCurrentGroup] = useState<IGroup>();
@@ -82,6 +84,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[]}> = memo(
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [availableAgents, setAvailableAgents] = useState<IAgent[]>(agents);
+    const [availableGroups, setAvailableGroups] = useState<IGroup[]>(groups);
     const scrollToBottom = useCallback(() => {
       if (autoScrollEnabled) {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -114,45 +117,28 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[]}> = memo(
     };
     const throttledScrollDown = throttle(scrollDown, 250);
 
+    // init
+    useEffect(() => {
+      setAvailableGroups(groups);
+      setAvailableAgents(agents);
+    }, [groups, agents]);
+
     useEffect(() => {
       if(newMessage){
         setCurrentConversation([...currentConversation, newMessage]);
+        onGroupsChange(groups.map(group => group.id === currentGroup?.id ? {...group, conversation: [...group.conversation, newMessage]} : group));
         agentExecutors.forEach(async (executor, i) => {
           if(newMessage.from != currentGroup?.agents[i]){
             var response = await executor.call({'from': newMessage.from, 'content': newMessage.content});
             var content = response['output'];
             if(content?.length > 0){
-              var responseMessage: IMessage = { from: currentGroup?.agents[i]!, mimeType: 'text/plain', content: content};
+              var responseMessage: IMessage = { from: currentGroup?.agents[i]!, id: 'text/plain', content: content};
               setNewMessage(responseMessage);
             }
           }
         })
       }
     }, [newMessage]);
-
-    useEffect(() => {
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          setAutoScrollEnabled(entry.isIntersecting);
-          if (entry.isIntersecting) {
-            textareaRef.current?.focus();
-          }
-        },
-        {
-          root: null,
-          threshold: 0.5,
-        },
-      );
-      const messagesEndElement = messagesEndRef.current;
-      if (messagesEndElement) {
-        observer.observe(messagesEndElement);
-      }
-      return () => {
-        if (messagesEndElement) {
-          observer.unobserve(messagesEndElement);
-        }
-      };
-    }, [messagesEndRef]);
 
     return (
       <Box
@@ -168,13 +154,13 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[]}> = memo(
             height: "100%",
           }}>
           <GroupPanel
-            groups={groups}
+            groups={availableGroups}
             onGroupSelected={(group) =>
             {
               setCurrentGroup(group);
               var agents = group.agents.map(agent => availableAgents.find(a => a.alias === agent));
               var agentExecutorProviders = agents.map(agent => getAgentExecutorProvider(agent!.id));
-              var agentExecutors = agentExecutorProviders.map((provider, i) => provider(agents[i]!, currentConversation));
+              var agentExecutors = agentExecutorProviders.map((provider, i) => provider(agents[i]!, group.conversation));
               setAgentExecutors(agentExecutors);
               setCurrentConversation(group.conversation);
             }} />
@@ -198,6 +184,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[]}> = memo(
 
             {currentConversation.map((message, index) => (
               <Box
+                key={index}
                 sx={{
                   marginTop: 2,
                   marginRight: 5,

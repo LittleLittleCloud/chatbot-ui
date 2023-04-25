@@ -31,9 +31,9 @@ export const EditableSavableTextField = (props: {name: string, value?: string, o
             />
             <Button
                 onClick={() => {
-                    if (isEditing) {
+                    if (isEditing && value != props.value) {
                         setIsSaving(true);
-                        props.onChange(value);
+                        props.onChange(value!);
                         setIsSaving(false);
                     }
                     setIsEditing(!isEditing);

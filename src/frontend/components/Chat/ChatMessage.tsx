@@ -1,4 +1,4 @@
-import { Message } from '@/types/chat';
+import { IMessage, Message } from '@/types/chat';
 import { IconEdit } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { FC, memo, useEffect, useRef, useState } from 'react';
@@ -8,7 +8,6 @@ import remarkMath from 'remark-math';
 import { CodeBlock } from '../Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '../Markdown/MemoizedReactMarkdown';
 import { CopyButton } from './CopyButton';
-import { IMessage } from './Chat';
 import { Avatar, Box, Stack, Typography } from '@mui/material';
 
 interface Props {
@@ -28,7 +27,7 @@ export const ChatMessage: FC<Props> = memo(
     const copyOnClick = () => {
       if (!navigator.clipboard) return;
 
-      navigator.clipboard.writeText(message.content).then(() => {
+      navigator.clipboard.writeText(message.content.toString()).then(() => {
         setMessageCopied(true);
         setTimeout(() => {
           setMessageCopied(false);
@@ -58,7 +57,7 @@ export const ChatMessage: FC<Props> = memo(
               {isUser ? 'You' : message.from.substring(0, 2)}
             </Avatar>
             <Typography maxWidth="40%" variant="h6" pt="100" sx={{padding:2, borderRadius:2, color: 'text.primary',fontWeight: 'fontWeightLight', backgroundColor: 'grey.900' }}>
-              {message.content}
+              {message.content.toString()}
             </Typography>
             
           </Stack>

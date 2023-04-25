@@ -5,10 +5,11 @@ import { Agent, ChatAgent, ZeroShotAgent, initializeAgentExecutor, AgentExecutor
 import { ConversationChain } from "langchain/chains";
 import {LLM} from "langchain/llms/base";
 import { ChatMemory } from "./chatMemory";
-import { IMessage } from "@/components/Chat/Chat";
 import { AgentAction, AgentFinish, AgentStep, InputValues, PartialValues } from "langchain/dist/schema";
 import { BasePromptTemplate, BaseStringPromptTemplate, SerializedBasePromptTemplate, renderTemplate } from "langchain/prompts";
-
+import { RecordMap } from "@/utils/app/recordProvider";
+import { LLMChain } from "langchain";
+import { IMessage } from "@/types/chat";
 interface IZeroshotAgent extends IAgent {
     llm: IModelMetaData;
     // todo: tools

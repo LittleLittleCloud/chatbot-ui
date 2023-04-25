@@ -1,5 +1,6 @@
 import { Conversation } from '@/types/chat';
 import { Folder } from '@/types/folder';
+import { IStorage } from '@/types/storage';
 
 function currentDate() {
   const date = new Date();
@@ -8,29 +9,13 @@ function currentDate() {
   return `${month}-${day}`;
 }
 
-export const exportData = () => {
-  let history = localStorage.getItem('conversationHistory');
-  let folders = localStorage.getItem('folders');
-
-  if (history) {
-    history = JSON.parse(history);
-  }
-
-  if (folders) {
-    folders = JSON.parse(folders);
-  }
-
-  const data = {
-    history,
-    folders,
-  };
-
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
+export const exportData = (storage: IStorage) => {
+  const blob = new Blob([JSON.stringify(storage, null, 2)], {
     type: 'application/json',
   });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
-  link.download = `chatbot_ui_history_${currentDate()}.json`;
+  link.download = `chatbot_ui_storage_${currentDate()}.chat`;
   link.href = url;
   link.style.display = 'none';
   document.body.appendChild(link);

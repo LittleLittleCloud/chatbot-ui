@@ -1,4 +1,7 @@
-export function extract<T>(properties: Record<keyof T, true>){
+import { IRecord } from "@/types/storage";
+import { RecordMap } from "./recordProvider";
+
+export function extract<T extends IRecord>(properties: RecordMap<T>){
     return function<TActual extends T>(obj: TActual): T{
         return Object.keys(properties).reduce<{}>((acc, key) => {
             Object.assign(acc, { [key]: Object.getOwnPropertyDescriptor(obj, key)?.value })

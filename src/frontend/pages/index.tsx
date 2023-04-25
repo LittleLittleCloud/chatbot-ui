@@ -21,7 +21,7 @@ import {
 import { saveFolders } from '@/utils/app/folders';
 import { exportData, importData } from '@/utils/app/importExport';
 import { savePrompts } from '@/utils/app/prompts';
-import { AppBar, Button, Toolbar, Typography, Box, createTheme } from '@mui/material';
+import { AppBar, Button, Toolbar, Typography, Box, createTheme, Divider, Stack, Tooltip, IconButton, Avatar, Menu, MenuItem } from '@mui/material';
 import { IconArrowBarLeft, IconArrowBarRight } from '@tabler/icons-react';
 import { GetServerSideProps, GetStaticProps } from 'next';
 import { useTranslation } from 'next-i18next';
@@ -36,26 +36,22 @@ import { BaseLLM, LLM } from "langchain/dist/llms/base";
 import { GPT_35_TURBO, TextDavinci003 } from '@/model/azure/GPT';
 import '@/utils/app/setup';
 import { AgentPage } from '@/components/Agent/agent';
-interface HomeProps {
-  serverSideApiKeyIsSet: boolean;
-  modelConfigs: IModelConfig[];
-  groups: IGroup[];
-  agents: IAgent[];
-}
+import { IStorage } from '@/types/storage';
+import SettingsIcon from '@mui/icons-material/Settings';
 
-const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups, agents }) => {
+const Home: React.FC<IStorage> = () => {
   const { t } = useTranslation('chat');
-
   // STATE ----------------------------------------------
-
-  const [apiKey, setApiKey] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
+  const [storage, setStorage] = useState<IStorage>({ groups: [], agents: [], id: 'storage' });
+  const [availableGroups, setGroups] = useState<IGroup[]>(storage.groups);
+  const [availableAgents, setAgents] = useState<IAgent[]>(storage.agents);
   const [lightMode, setLightMode] = useState<'dark' | 'light'>('dark');
+  const [hasChange, setHasChange] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
+  const [isInit, setIsInit] = useState<boolean>(false);
   const [messageIsStreaming, setMessageIsStreaming] = useState<boolean>(false);
 
-  const [modelError, setModelError] = useState<ErrorMessage | null>(null);
-
-  const [models, setModels] = useState<OpenAIModel[]>([]);
 
   const [folders, setFolders] = useState<Folder[]>([]);
 
@@ -72,154 +68,18 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups
   // REFS ----------------------------------------------
 
   const stopConversationRef = useRef<boolean>(false);
-
   // FETCH RESPONSE ----------------------------------------------
 
-  const handleSend = async (message: Message, deleteCount = 0) => {
-    if (selectedConversation) {
-      let updatedConversation: Conversation;
-
-      if (deleteCount) {
-        const updatedMessages = [...selectedConversation.messages];
-        for (let i = 0; i < deleteCount; i++) {
-          updatedMessages.pop();
-        }
-
-        updatedConversation = {
-          ...selectedConversation,
-          messages: [...updatedMessages, message],
-        };
-      } else {
-        updatedConversation = {
-          ...selectedConversation,
-          messages: [...selectedConversation.messages, message],
-        };
-      }
-
-      setSelectedConversation(updatedConversation);
-      setLoading(true);
-      setMessageIsStreaming(true);
-
-      const chatBody: ChatBody = {
-        messages: updatedConversation.messages,
-        to: 'davinci',
-        from: 'bigmiao',
-      };
-
-      const controller = new AbortController();
-      const response = await fetch('/chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        signal: controller.signal,
-        body: JSON.stringify(chatBody),
-      });
-
-      if (!response.ok) {
-        setLoading(false);
-        setMessageIsStreaming(false);
-        return;
-      }
-
-      const data = response.body;
-
-      if (!data) {
-        setLoading(false);
-        setMessageIsStreaming(false);
-        return;
-      }
-
-      if (updatedConversation.messages.length === 1) {
-        const { content } = message;
-        const customName =
-          content.length > 30 ? content.substring(0, 30) + '...' : content;
-
-        updatedConversation = {
-          ...updatedConversation,
-          name: customName,
-        };
-      }
-
-      setLoading(false);
-
-      const reader = data.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-      let isFirst = true;
-      let text = '';
-
-      while (!done) {
-        if (stopConversationRef.current === true) {
-          controller.abort();
-          done = true;
-          break;
-        }
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        const chunkValue = decoder.decode(value);
-
-        text += chunkValue;
-
-        if (isFirst) {
-          isFirst = false;
-          const updatedMessages: Message[] = [
-            ...updatedConversation.messages,
-            { role: 'assistant', content: chunkValue },
-          ];
-
-          updatedConversation = {
-            ...updatedConversation,
-            messages: updatedMessages,
-          };
-
-          setSelectedConversation(updatedConversation);
-        } else {
-          const updatedMessages: Message[] = updatedConversation.messages.map(
-            (message, index) => {
-              if (index === updatedConversation.messages.length - 1) {
-                return {
-                  ...message,
-                  content: text,
-                };
-              }
-
-              return message;
-            },
-          );
-
-          updatedConversation = {
-            ...updatedConversation,
-            messages: updatedMessages,
-          };
-
-          setSelectedConversation(updatedConversation);
-        }
-      }
-
-      saveConversation(updatedConversation);
-
-      const updatedConversations: Conversation[] = conversations.map(
-        (conversation) => {
-          if (conversation.id === selectedConversation.id) {
-            return updatedConversation;
-          }
-
-          return conversation;
-        },
-      );
-
-      if (updatedConversations.length === 0) {
-        updatedConversations.push(updatedConversation);
-      }
-
-      setConversations(updatedConversations);
-
-      saveConversations(updatedConversations);
-
-      setMessageIsStreaming(false);
+  // First loading
+  useEffect(() => {
+    if(isInit) return;
+    const storage = localStorage.getItem('storage');
+    if (storage) {
+      setStorage(JSON.parse(storage));
     }
-  };
+    setIsInit(false);
+    console.log('init');
+  }, []);
   // BASIC HANDLERS --------------------------------------------
 
   const handleLightMode = (mode: 'dark' | 'light') => {
@@ -227,341 +87,39 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups
     localStorage.setItem('theme', mode);
   };
 
-  const handleApiKeyChange = (apiKey: string) => {
-    setApiKey(apiKey);
-    localStorage.setItem('apiKey', apiKey);
+  const handleExportSettings = () => {
+    exportData(storage)
+    setIsMenuOpen(false);
   };
 
-  const handleToggleChatbar = () => {
-    setShowSidebar(!showSidebar);
-    localStorage.setItem('showChatbar', JSON.stringify(!showSidebar));
-  };
-
-  const handleTogglePromptbar = () => {
-    setShowPromptbar(!showPromptbar);
-    localStorage.setItem('showPromptbar', JSON.stringify(!showPromptbar));
-  };
-
-  const handleExportData = () => {
-    exportData();
-  };
-
-  const handleImportConversations = (data: {
-    conversations: Conversation[];
-    folders: Folder[];
-  }) => {
-    const updatedConversations = [...conversations, ...data.conversations];
-    const updatedFolders = [...folders, ...data.folders];
-
-    importData(updatedConversations, updatedFolders);
-    setConversations(updatedConversations);
-    setSelectedConversation(
-      updatedConversations[updatedConversations.length - 1],
-    );
-    setFolders(updatedFolders);
-  };
-
-  const handleSelectConversation = (conversation: Conversation) => {
-    setSelectedConversation(conversation);
-    saveConversation(conversation);
-  };
-
-  // FOLDER OPERATIONS  --------------------------------------------
-
-  const handleCreateFolder = (name: string, type: FolderType) => {
-    const newFolder: Folder = {
-      id: uuidv4(),
-      name,
-      type,
+  const handleImportSettings = ({ target }: {target: HTMLInputElement}) => {
+    if (!target.files?.length) return;
+    const file = target.files[0];
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const data: IStorage = JSON.parse(event.target?.result as string);
+      setStorage(data);
+      setIsMenuOpen(false);
     };
 
-    const updatedFolders = [...folders, newFolder];
-
-    setFolders(updatedFolders);
-    saveFolders(updatedFolders);
+    reader.readAsText(file);
   };
-
-  const handleDeleteFolder = (folderId: string) => {
-    const updatedFolders = folders.filter((f) => f.id !== folderId);
-    setFolders(updatedFolders);
-    saveFolders(updatedFolders);
-
-    const updatedConversations: Conversation[] = conversations.map((c) => {
-      if (c.folderId === folderId) {
-        return {
-          ...c,
-          folderId: null,
-        };
-      }
-
-      return c;
-    });
-    setConversations(updatedConversations);
-    saveConversations(updatedConversations);
-
-    const updatedPrompts: Prompt[] = prompts.map((p) => {
-      if (p.folderId === folderId) {
-        return {
-          ...p,
-          folderId: null,
-        };
-      }
-
-      return p;
-    });
-    setPrompts(updatedPrompts);
-    savePrompts(updatedPrompts);
-  };
-
-  const handleUpdateFolder = (folderId: string, name: string) => {
-    const updatedFolders = folders.map((f) => {
-      if (f.id === folderId) {
-        return {
-          ...f,
-          name,
-        };
-      }
-
-      return f;
-    });
-
-    setFolders(updatedFolders);
-    saveFolders(updatedFolders);
-  };
-
-  // CONVERSATION OPERATIONS  --------------------------------------------
-
-  const handleNewConversation = () => {
-    const lastConversation = conversations[conversations.length - 1];
-
-    const newConversation: Conversation = {
-      id: uuidv4(),
-      name: `${t('New Conversation')}`,
-      messages: [],
-      model: OpenAIModels[OpenAIModelID.GPT_3_5],
-      prompt: DEFAULT_SYSTEM_PROMPT,
-      folderId: null,
-    };
-
-    const updatedConversations = [...conversations, newConversation];
-
-    setSelectedConversation(newConversation);
-    setConversations(updatedConversations);
-
-    saveConversation(newConversation);
-    saveConversations(updatedConversations);
-
-    setLoading(false);
-  };
-
-  const handleDeleteConversation = (conversation: Conversation) => {
-    const updatedConversations = conversations.filter(
-      (c) => c.id !== conversation.id,
-    );
-    setConversations(updatedConversations);
-    saveConversations(updatedConversations);
-
-    if (updatedConversations.length > 0) {
-      setSelectedConversation(
-        updatedConversations[updatedConversations.length - 1],
-      );
-      saveConversation(updatedConversations[updatedConversations.length - 1]);
-    } else {
-      setSelectedConversation({
-        id: uuidv4(),
-        name: 'New conversation',
-        messages: [],
-        model: OpenAIModels[OpenAIModelID.GPT_3_5],
-        prompt: DEFAULT_SYSTEM_PROMPT,
-        folderId: null,
-      });
-      localStorage.removeItem('selectedConversation');
-    }
-  };
-
-  const handleUpdateConversation = (
-    conversation: Conversation,
-    data: KeyValuePair,
-  ) => {
-    const updatedConversation = {
-      ...conversation,
-      [data.key]: data.value,
-    };
-
-    const { single, all } = updateConversation(
-      updatedConversation,
-      conversations,
-    );
-
-    setSelectedConversation(single);
-    setConversations(all);
-  };
-
-  const handleClearConversations = () => {
-    setConversations([]);
-    localStorage.removeItem('conversationHistory');
-
-    setSelectedConversation({
-      id: uuidv4(),
-      name: 'New conversation',
-      messages: [],
-      model: OpenAIModels[OpenAIModelID.GPT_3_5],
-      prompt: DEFAULT_SYSTEM_PROMPT,
-      folderId: null,
-    });
-    localStorage.removeItem('selectedConversation');
-
-    const updatedFolders = folders.filter((f) => f.type !== 'chat');
-    setFolders(updatedFolders);
-    saveFolders(updatedFolders);
-  };
-
-  const handleEditMessage = (message: Message, messageIndex: number) => {
-    if (selectedConversation) {
-      const updatedMessages = selectedConversation.messages
-        .map((m, i) => {
-          if (i < messageIndex) {
-            return m;
-          }
-        })
-        .filter((m) => m) as Message[];
-
-      const updatedConversation = {
-        ...selectedConversation,
-        messages: updatedMessages,
-      };
-
-      const { single, all } = updateConversation(
-        updatedConversation,
-        conversations,
-      );
-
-      setSelectedConversation(single);
-      setConversations(all);
-
-      setCurrentMessage(message);
-    }
-  };
-
-  // PROMPT OPERATIONS --------------------------------------------
-
-  const handleCreatePrompt = () => {
-    const lastPrompt = prompts[prompts.length - 1];
-
-    const newPrompt: Prompt = {
-      id: uuidv4(),
-      name: `Prompt ${prompts.length + 1}`,
-      description: '',
-      content: '',
-      model: OpenAIModels[OpenAIModelID.GPT_3_5],
-      folderId: null,
-    };
-
-    const updatedPrompts = [...prompts, newPrompt];
-
-    setPrompts(updatedPrompts);
-    savePrompts(updatedPrompts);
-  };
-
-  const handleUpdatePrompt = (prompt: Prompt) => {
-    const updatedPrompts = prompts.map((p) => {
-      if (p.id === prompt.id) {
-        return prompt;
-      }
-
-      return p;
-    });
-
-    setPrompts(updatedPrompts);
-    savePrompts(updatedPrompts);
-  };
-
-  const handleDeletePrompt = (prompt: Prompt) => {
-    const updatedPrompts = prompts.filter((p) => p.id !== prompt.id);
-    setPrompts(updatedPrompts);
-    savePrompts(updatedPrompts);
-  };
-
-  const handleCreatePromptFolder = (name: string) => {};
-
-  // EFFECTS  --------------------------------------------
 
   useEffect(() => {
-    if (currentMessage) {
-      handleSend(currentMessage);
-      setCurrentMessage(undefined);
+    if(isSaving){
+      localStorage.setItem('storage', JSON.stringify(storage));
+      setHasChange(false);
+      setIsSaving(false);
     }
-  }, [currentMessage]);
+  }, [isSaving]);
 
   useEffect(() => {
-    if (window.innerWidth < 640) {
-      setShowSidebar(false);
-    }
-  }, [selectedConversation]);
+    setGroups(storage.groups);
+    setAgents(storage.agents);
+  }, [storage]);
 
-  // ON LOAD --------------------------------------------
-
-  useEffect(() => {
-    const theme = localStorage.getItem('theme');
-    if (theme) {
-      setLightMode(theme as 'dark' | 'light');
-    }
-
-    if (window.innerWidth < 640) {
-      setShowSidebar(false);
-    }
-
-    const showChatbar = localStorage.getItem('showChatbar');
-    if (showChatbar) {
-      setShowSidebar(showChatbar === 'true');
-    }
-
-    const showPromptbar = localStorage.getItem('showPromptbar');
-    if (showPromptbar) {
-      setShowPromptbar(showPromptbar === 'true');
-    }
-
-    const folders = localStorage.getItem('folders');
-    if (folders) {
-      setFolders(JSON.parse(folders));
-    }
-
-    const prompts = localStorage.getItem('prompts');
-    if (prompts) {
-      setPrompts(JSON.parse(prompts));
-    }
-
-    const conversationHistory = localStorage.getItem('conversationHistory');
-    if (conversationHistory) {
-      const parsedConversationHistory: Conversation[] =
-        JSON.parse(conversationHistory);
-      const cleanedConversationHistory = cleanConversationHistory(
-        parsedConversationHistory,
-      );
-      setConversations(cleanedConversationHistory);
-    }
-
-    const selectedConversation = localStorage.getItem('selectedConversation');
-    if (selectedConversation) {
-      const parsedSelectedConversation: Conversation =
-        JSON.parse(selectedConversation);
-      const cleanedSelectedConversation = cleanSelectedConversation(
-        parsedSelectedConversation,
-      );
-      setSelectedConversation(cleanedSelectedConversation);
-    } else {
-      setSelectedConversation({
-        id: uuidv4(),
-        name: 'New conversation',
-        messages: [],
-        model: OpenAIModels[OpenAIModelID.GPT_3_5],
-        prompt: DEFAULT_SYSTEM_PROMPT,
-        folderId: null,
-      });
-    }
-  }, [serverSideApiKeyIsSet]);
-
-  const tabs = ['Chat', 'Agent', 'Model']
+  const tabs = ['Chat', 'Agent']
+  const settings = ['Import', 'Export'];
   const [selectedTab, setSelectedTab] = useState(tabs[0]);
   const theme = createTheme({
     palette: {
@@ -572,7 +130,6 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups
     <ThemeProvider theme={theme}>
       <Head>
         <title>Chatbot UI</title>
-        <meta name="description" content="ChatGPT but better." />
         <meta
           name="viewport"
           content="height=device-height ,width=device-width, initial-scale=1, user-scalable=no"
@@ -594,7 +151,7 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups
           sx={{
             Height: "10%",
           }}>
-          <AppBar position="static">
+          <AppBar position='static' >
           <Toolbar variant="regular">
             <Typography
               variant="h6"
@@ -602,36 +159,76 @@ const Home: React.FC<HomeProps> = ({ serverSideApiKeyIsSet, modelConfigs, groups
               sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}>
               CHATBOT
             </Typography>
-            <Box sx={{ display: { xs: 'none', sm: 'block', position: 'flex'} }}>
+            <Stack direction="row" spacing={2}>
+              {hasChange && <Button variant='outlined' onClick={() => setIsSaving(true)}>save</Button>}
               {
-                tabs.map((tab) => {
+                tabs.map((tab, i) => {
                   return (
-                    <Button sx={{ color: '#fff' }} onClick={() => setSelectedTab(tab)} >{tab}</Button>
+                    <Button key={i} sx={{ color: '#fff' }} onClick={() => setSelectedTab(tab)} >{tab}</Button>
                   )
                 })
               }
-            </Box>
+              <Box sx={{ flexGrow: 0 }}> 
+                <Tooltip title="Open settings">
+                  <SettingsIcon fontSize="large" onClick={() => setIsMenuOpen(true)} />
+                </Tooltip>
+                <Menu
+                  sx={{ mt: '45px' }}
+                  anchorOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  keepMounted
+                  transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                  }}
+                  open={isMenuOpen}
+                  onClose={() => setIsMenuOpen(false)}
+                  >
+                  <MenuItem key="Export" onClick={handleExportSettings}>
+                    <Button component="label">Export</Button>
+                  </MenuItem>
+                  <MenuItem key="Import">
+                    <Button component="label">
+                      Import
+                      <input
+                        type="file"
+                        accept=".chat"
+                        onChange={handleImportSettings}
+                        hidden
+                      />
+                    </Button>
+                  </MenuItem>
+            </Menu>
+              </Box>
+            </Stack>
             </Toolbar>
-            </AppBar>
+          </AppBar>
         </Box>
       <Box
         sx={{
           flexGrow: 1,
           height: "90%",
         }}>
-        {selectedTab == 'Chat' && selectedConversation && (
+        {selectedTab == 'Chat' && (
           <Chat
-            groups={groups}
-            agents={agents}
+            groups={availableGroups}
+            agents={availableAgents}
+            onGroupsChange={(groups) => {
+              setStorage({ ...storage, groups });
+              setHasChange(true);
+            }}
           />
         )}
         {selectedTab == 'Agent' && (
-          <AgentPage agents={agents} />
-        )}
-        {selectedTab == 'Model' && (
-          <Models
-            modelConfigs = {modelConfigs}
-            onModelConfigsChange={(modelConfigs) => {console.log(modelConfigs)}}/>
+          <AgentPage
+            agents={availableAgents}
+            onAgentsChanged={(agents) => {
+              setStorage({ ...storage, agents });
+              setHasChange(true);
+            }}
+            />
         )}
       </Box>
       </Box>
@@ -644,74 +241,6 @@ export default Home;
 export const getStaticProps: GetStaticProps = async ({ locale }) => {
   return {
     props: {
-      serverSideApiKeyIsSet: !!process.env.OPENAI_API_KEY,
-      modelConfigs:
-        [
-          {avatar: "model 1", alias: "model 1", model: { apiKey: "fc7e07b8e96d4c5e89add9d9cfcb14ee", resourceName: "cog-2cmrcuejmcrre", deploymentID: "chat", id: "azure.gpt-35-turbo" }},
-          {avatar: "model 2", alias: "model 2", model: { apiKey: "fc7e07b8e96d4c5e89add9d9cfcb14ee", resourceName: "cog-2cmrcuejmcrre", deploymentID: "davinci", id: "azure.text-davinci-003"}},
-        ],
-      groups: [
-        {
-          name: "group 1",
-          agents: [
-            'jarvis',
-          ],
-          conversation:[
-            {
-              from: "__user",
-              content: "hello"
-            },
-            {
-              from: "jarvis",
-              content: "how can I help you"
-            }
-          ]
-        },
-        {
-          name: "group 2",
-          agents: [
-            'siri',
-          ],
-          conversation:[
-            {
-              from: "__user",
-              content: "what's date todassssssssssssssssssssssssssssssssssssssssssssssssssssy"
-            },
-            {
-              from: "siri",
-              content: "today is 12/12/2021sssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
-            }
-          ]
-        }
-      ],
-      agents: [
-        {
-          "alias": "jarvis",
-          "id": "agent.chat",
-          "prefixPrompt": "Your name is jarvis, you are a chatbot in a chat room. Try to be helpful and friendly. Don't reply anything if new message is from you.",
-          "suffixPrompt": "chat history: \n {history} \n new message \n {from}: {content} \n your response:",
-          "llm": {
-            "id": "azure.text-davinci-003",
-            "apiKey": "fc7e07b8e96d4c5e89add9d9cfcb14ee",
-            "resourceName": "cog-2cmrcuejmcrre",
-            "deploymentID": "davinci",
-            "temperature": 0.7,
-            "maxTokens": 256,
-          }
-        },
-        {
-          "alias": "siri",
-          "id": "agent.chat",
-          "llm": {
-            "id": "azure.gpt-35-turbo",
-            "apiKey": "fc7e07b8e96d4c5e89add9d9cfcb14ee",
-            "resourceName": "cog-2cmrcuejmcrre",
-            "deploymentID": "chat",
-            "temperature": 1,
-            "maxTokens": 1024,
-          }
-        }
-      ],
       ...(await serverSideTranslations(locale ?? 'en', [
         'common',
         'chat',

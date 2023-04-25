@@ -1,4 +1,4 @@
-import { Message } from '@/types/chat';
+import { IMessage, Message } from '@/types/chat';
 import { OpenAIModel, OpenAIModelID } from '@/types/openai';
 import { Prompt } from '@/types/prompt';
 import { IconPlayerStop, IconRepeat, IconSend } from '@tabler/icons-react';
@@ -15,23 +15,15 @@ import {
 import { PromptList } from './PromptList';
 import { VariableModal } from './VariableModal';
 import { Box, Button, TextField } from '@mui/material';
-import { IMessage } from './Chat';
 
 interface Props {
   messageIsStreaming: boolean;
-  model: OpenAIModel;
-  conversationIsEmpty: boolean;
-  messages: Message[];
-  prompts: Prompt[];
   onSend: (message: IMessage) => void;
-  onRegenerate: () => void;
-  stopConversationRef: MutableRefObject<boolean>;
   textareaRef: MutableRefObject<HTMLTextAreaElement | null>;
 }
 
 export const ChatInput: FC<Props> = ({
   messageIsStreaming,
-  prompts,
   onSend,
   textareaRef,
 }) => {
@@ -46,10 +38,6 @@ export const ChatInput: FC<Props> = ({
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const promptListRef = useRef<HTMLUListElement | null>(null);
-
-  const filteredPrompts = prompts?.filter((prompt) =>
-    prompt.name.toLowerCase().includes(promptInputValue.toLowerCase()),
-  );
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -79,7 +67,7 @@ export const ChatInput: FC<Props> = ({
       return;
     }
 
-    onSend({ from: '__user', content, mimeType: 'text/plain' });
+    onSend({ from: '__user', content, id: 'text/plain' });
     setContent('');
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {
@@ -95,23 +83,10 @@ export const ChatInput: FC<Props> = ({
     return mobileRegex.test(userAgent);
   };
 
-  const handleInitModal = () => {
-    const selectedPrompt = filteredPrompts[activePromptIndex];
-    setContent((prevContent) => {
-      const newContent = prevContent?.replace(/\/\w*$/, selectedPrompt.content);
-      return newContent;
-    });
-    handlePromptSelect(selectedPrompt);
-    setShowPromptList(false);
-  };
-
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (showPromptList) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setActivePromptIndex((prevIndex) =>
-          prevIndex < prompts.length - 1 ? prevIndex + 1 : prevIndex,
-        );
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setActivePromptIndex((prevIndex) =>
@@ -119,12 +94,9 @@ export const ChatInput: FC<Props> = ({
         );
       } else if (e.key === 'Tab') {
         e.preventDefault();
-        setActivePromptIndex((prevIndex) =>
-          prevIndex < prompts.length - 1 ? prevIndex + 1 : 0,
-        );
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        handleInitModal();
+        // handleInitModal();
       } else if (e.key === 'Escape') {
         e.preventDefault();
         setShowPromptList(false);
@@ -240,7 +212,7 @@ export const ChatInput: FC<Props> = ({
                 },
               },
             }}
-            ref={textareaRef}
+            // ref={textareaRef}
             multiline={true}
             placeholder={t('Type a message') || ''}
             onChange={handleChange}

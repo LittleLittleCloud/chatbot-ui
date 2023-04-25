@@ -1,4 +1,4 @@
-import { IMessage } from "@/components/Chat/Chat";
+import { IMessage } from "@/types/chat";
 import { InputValues } from "langchain/dist/schema";
 import { BaseMemory } from "langchain/memory";
 export type OutputValues = Record<string, any>;
@@ -34,10 +34,10 @@ export class ChatMemory extends BaseMemory{
         console.log(outputValues);
         var from: string = inputValues[this.fromKey];
         var content: string = inputValues[this.contentKey];
-        this.chatHistory.push({from: from, content: content, mimeType: 'text/plain'});
+        this.chatHistory.push({from: from, content: content, id: 'text/plain'});
         var output = outputValues["response"];
         if(output){
-            this.chatHistory.push({from: this.outputKey, content: output, mimeType: 'text/plain'});
+            this.chatHistory.push({from: this.outputKey, content: output, id: 'text/plain'});
         }
     }
 

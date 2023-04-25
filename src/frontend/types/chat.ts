@@ -1,4 +1,5 @@
 import { OpenAIModel } from './openai';
+import { IRecord } from './storage';
 
 export interface Message {
   role: Role;
@@ -22,8 +23,8 @@ export interface Conversation {
   folderId: string | null;
 }
 
-export interface IMessage{
+export interface IMessage extends IRecord{
   from: string | '__user',
-  mimeType: 'text/plain' | 'text/markdown',
+  id: 'text/plain' | 'text/markdown',
   content: string | Blob
 }

@@ -16,7 +16,7 @@ import { TabContext, TabPanel } from '@mui/lab';
 import { ReactElement } from 'react-markdown/lib/react-markdown';
 import { hasAgentExecutorProvider } from '@/utils/app/agentProvider';
 
-export const AgentPage: FC<{agents: IAgent[]}> = ({agents}) => {
+export const AgentPage: FC<{agents: IAgent[], onAgentsChanged: (agents: IAgent[]) => void}> = ({agents, onAgentsChanged}) => {
     const [availableAgents, setAvailableAgents] = useState<IAgent[]>(agents);
     const [selectedAgentID, setSelectedAgentID] = useState<string>();
     const [selectedAgent, setSelectedAgent] = useState<IAgent>();
@@ -58,6 +58,7 @@ export const AgentPage: FC<{agents: IAgent[]}> = ({agents}) => {
                 return agent;
             })
             setAvailableAgents(newAgents);
+            onAgentsChanged(newAgents);
         }
     }, [selectedAgent]);
 
@@ -78,6 +79,7 @@ export const AgentPage: FC<{agents: IAgent[]}> = ({agents}) => {
                 }}>
                 {availableAgents.map((agent, index) => 
                     <ListItem
+                        key={index}
                         onClick={() => setSelectedAgentIndex(index)}>
                         <ListItemButton>
                             <ListItemIcon>

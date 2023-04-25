@@ -1,8 +1,9 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
 
-name: chatbot-freeloader
+name: chatroom
 services:
-  backend:
-    project: .
-    host: appservice
-    language: js
+  frontend:
+    project: ./src/frontend
+    host: staticwebapp
+    dist: ./build
+    language: ts
