@@ -211,7 +211,7 @@ const Home: React.FC<IStorage> = () => {
           flexGrow: 1,
           height: "90%",
         }}>
-        {selectedTab == 'Chat' && (
+        {selectedTab == 'Chat' && 
           <Chat
             groups={availableGroups}
             agents={availableAgents}
@@ -220,7 +220,7 @@ const Home: React.FC<IStorage> = () => {
               setHasChange(true);
             }}
           />
-        )}
+        }
         {selectedTab == 'Agent' && (
           <AgentPage
             agents={availableAgents}
