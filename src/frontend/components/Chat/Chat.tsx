@@ -27,27 +27,11 @@ import { IAgent } from '@/types/agent';
 import { AgentExecutor } from 'langchain/agents';
 import { getAgentExecutorProvider } from '@/utils/app/agentProvider';
 import { IRecord } from '@/types/storage';
-import { EditableSavableTextField, EditableSelectField, SmallMultipleSelectField, SmallSelectField, SmallTextField } from '../Global/EditableSavableTextField';
+import { CentralBox, EditableSavableTextField, EditableSelectField, SmallMultipleSelectField, SmallSelectField, SmallTextField } from '../Global/EditableSavableTextField';
 import { getAvailableAgents } from '@/utils/app/agentConfigPannelProvider';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-
-const DeleteConfirmationDialog: FC<{open: boolean, message: string, onConfirm: () => void, onCancel: () => void}> = ({open, message, onConfirm, onCancel}) => {
-  return (
-    <Dialog open={open} onClose={onCancel}>
-      <DialogTitle>{message}</DialogTitle>
-      <DialogContent>
-        <DialogContentText>
-          This action cannot be undone.
-        </DialogContentText>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel}>Cancel</Button>
-        <Button onClick={onConfirm}>Delete</Button>
-      </DialogActions>
-    </Dialog>
-  )
-};
+import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
 
 const CreateGroupDialog: FC<{open: boolean, availableAgents: IAgent[], onSaved: (group: IGroup) => void, onCancel: () => void}> = ({open, availableAgents, onSaved, onCancel}) => {
   const [groupName, setGroupName] = useState<string>();
@@ -350,13 +334,10 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], onGroupsChange: (grou
             <div
               ref={messagesEndRef} />
             </List> :
-            <Box
+            <CentralBox
               sx={{
-                display: "flex",
                 width: "100%",
                 height: "100%",
-                justifyContent: "center",
-                alignItems: "center",
               }}>
                 {availableAgents?.length == 0 &&
                 <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>No agent available, create agent first</Typography>
@@ -380,7 +361,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], onGroupsChange: (grou
                 
                 </>
                 }
-            </Box>
+            </CentralBox>
           }
           {currentGroup &&
           <Box

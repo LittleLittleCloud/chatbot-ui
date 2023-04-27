@@ -5,7 +5,6 @@ import { EditableSavableTextField } from "@/components/Global/EditableSavableTex
 import { providerType } from "@/utils/app/configPanelProvider";
 
 const AzureGPT35TurboConfig: providerType<IGPT35Turbo> = (model, onModelConfigChanged) => {
-    const [modelID, setModelID] = useState(model.id);
     return (
         <Stack spacing={2}>
             <EditableSavableTextField name="ApiKey" value={model.apiKey} onChange={(value) => onModelConfigChanged({ ...model, apiKey: value})}/>
@@ -15,12 +14,11 @@ const AzureGPT35TurboConfig: providerType<IGPT35Turbo> = (model, onModelConfigCh
             <EditableSavableTextField name="FrequencyPenalty" value={model.frequencyPenalty?.toString()} onChange={(value) => onModelConfigChanged({ ...model, frequencyPenalty: Number(value)})}/>
             <EditableSavableTextField name="PresencePenalty" value={model.presencePenalty?.toString()} onChange={(value) => onModelConfigChanged({ ...model, presencePenalty: Number(value)})}/>
             <EditableSavableTextField name="Description" value={model.description} onChange={(value) => onModelConfigChanged({ ...model, description: value})}/>
+            <EditableSavableTextField name="Deploy ID" value={model.deploymentID} onChange={(value) => onModelConfigChanged({ ...model, deploymentID: value})}/>
         </Stack>);
 };
 
 const AzureTextDavinci003Config: providerType<ITextDavinci003> = (model, onModelConfigChanged) => {
-    const [modelID, setModelID] = useState(model.id);
-
     return (
         <Stack spacing={2}>
             <EditableSavableTextField name="ApiKey" value={model.apiKey} onChange={(value) => onModelConfigChanged({ ...model, apiKey: value})}/>
@@ -30,6 +28,8 @@ const AzureTextDavinci003Config: providerType<ITextDavinci003> = (model, onModel
             <EditableSavableTextField name="FrequencyPenalty" value={model.frequencyPenalty?.toString()} onChange={(value) => onModelConfigChanged({ ...model, frequencyPenalty: Number(value)})}/>
             <EditableSavableTextField name="PresencePenalty" value={model.presencePenalty?.toString()} onChange={(value) => onModelConfigChanged({ ...model, presencePenalty: Number(value)})}/>
             <EditableSavableTextField name="Description" value={model.description} onChange={(value) => onModelConfigChanged({ ...model, description: value})}/>
+            <EditableSavableTextField name="Deploy ID" value={model.deploymentID} onChange={(value) => onModelConfigChanged({ ...model, deploymentID: value})}/>
+            <EditableSavableTextField name="Resource Name" value={model.resourceName} onChange={(value) => onModelConfigChanged({ ...model, resourceName: value})}/>
         </Stack>);
 };
 
