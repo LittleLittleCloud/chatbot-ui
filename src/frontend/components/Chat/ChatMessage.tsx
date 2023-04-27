@@ -21,7 +21,7 @@ export const ChatMessage: FC<Props> = memo(
     const [isHovering, setIsHovering] = useState<boolean>(false);
     const [messageContent, setMessageContent] = useState(message.content);
     const [messagedCopied, setMessageCopied] = useState(false);
-    const [isUser, _] = useState(message.from === '__user');
+    const [isUser, setIsUser] = useState(message.from == '__user');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const copyOnClick = () => {
@@ -34,6 +34,10 @@ export const ChatMessage: FC<Props> = memo(
         }, 2000);
       });
     };
+
+    useEffect(() => {
+      setIsUser(message.from == '__user');
+    }, [message]);
 
     useEffect(() => {
       if (textareaRef.current) {

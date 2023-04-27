@@ -114,6 +114,7 @@ const Home: React.FC<IStorage> = () => {
   }, [isSaving]);
 
   useEffect(() => {
+    console.log('storage', storage);
     setGroups(storage.groups);
     setAgents(storage.agents);
   }, [storage]);
