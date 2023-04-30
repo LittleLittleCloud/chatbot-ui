@@ -11,7 +11,7 @@ import { RecordMap } from "@/utils/app/recordProvider";
 import { LLMChain } from "langchain";
 import { IMessage } from "@/types/chat";
 interface IZeroshotAgent extends IAgent {
-    llm: IModelMetaData;
+    llm?: IModelMetaData;
     // todo: tools
     suffixPrompt?: string;
     prefixPrompt?: string;
@@ -90,8 +90,11 @@ class CustomPromptTemplate extends BaseStringPromptTemplate {
   }
 
 export function initializeZeroshotAgentExecutor(agent: IZeroshotAgent, history?: IMessage[]): AgentExecutor {
-    var llmProvider = getProvider(agent.llm);
-    var llm = llmProvider(agent.llm);
+    if (!agent.llm) {
+        throw new Error("No llm provided");
+    }
+    var llmProvider = getProvider(agent.llm!);
+    var llm = llmProvider(agent.llm!);
     var prompt = `
     ${agent.prefixPrompt}
     history:

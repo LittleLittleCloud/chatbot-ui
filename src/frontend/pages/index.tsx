@@ -38,7 +38,8 @@ import '@/utils/app/setup';
 import { AgentPage } from '@/components/Agent/agent';
 import { IStorage } from '@/types/storage';
 import SettingsIcon from '@mui/icons-material/Settings';
-
+import GitHubIcon from '@mui/icons-material/GitHub';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 const Home: React.FC<IStorage> = () => {
   const { t } = useTranslation('chat');
   // STATE ----------------------------------------------
@@ -158,7 +159,7 @@ const Home: React.FC<IStorage> = () => {
               variant="h6"
               component="div"
               sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}>
-              CHATBOT
+              LLM Chat
             </Typography>
             <Stack direction="row" spacing={2}>
               {hasChange && <Button variant='outlined' onClick={() => setIsSaving(true)}>save</Button>}
@@ -169,9 +170,16 @@ const Home: React.FC<IStorage> = () => {
                   )
                 })
               }
-              <Box sx={{ flexGrow: 0 }}> 
+              <Tooltip title="View project on GitHub">
+                <GitHubIcon
+                fontSize='large'
+                onClick={() => {
+                  window.open('https://github.com/LittleLittleCloud/llm-chatroom');
+                }} />
+              </Tooltip>
+              <Box sx={{ flexGrow: 0 }}>
                 <Tooltip title="Open settings">
-                  <SettingsIcon fontSize="large" onClick={() => setIsMenuOpen(true)} />
+                  <MoreVertIcon fontSize="large" onClick={() => setIsMenuOpen(true)} />
                 </Tooltip>
                 <Menu
                   sx={{ mt: '45px' }}

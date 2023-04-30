@@ -114,7 +114,12 @@ export const SmallSelectField = (props: {name: string, value?: string, onChange:
 
 export const SmallMultipleSelectField = (props: {name: string, value?: string[], onChange: (value: string[]) => void, options: string[]}) => {
     const [value, setValue] = useState(props.value);
+    const [options, setOptions] = useState(props.options);
 
+    useEffect(() => {
+        setValue(props.value);
+        setOptions(props.options);
+    }, [props]);
     useEffect(() => {
         if(value != props.value && props.value != undefined){
             props.onChange(value);
@@ -134,7 +139,7 @@ export const SmallMultipleSelectField = (props: {name: string, value?: string[],
             }}
             onChange={(e) => setValue(e.target.value as string[])}
         >
-            {props.options.map((option) => (
+            {options.map((option) => (
                 <MenuItem key={option} value={option}>
                     {option}
                 </MenuItem>

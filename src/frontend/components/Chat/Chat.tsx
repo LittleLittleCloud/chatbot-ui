@@ -33,10 +33,17 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
 
-const CreateGroupDialog: FC<{open: boolean, availableAgents: IAgent[], onSaved: (group: IGroup) => void, onCancel: () => void}> = ({open, availableAgents, onSaved, onCancel}) => {
-  const [groupName, setGroupName] = useState<string>();
+const CreateOrEditGroupDialog: FC<{open: boolean, group: IGroup | null, availableAgents: IAgent[], onSaved: (group: IGroup) => void, onCancel: () => void}> = ({open, group, availableAgents, onSaved, onCancel}) => {
+  const [groupName, setGroupName] = useState<string | undefined>();
   const [selectAgents, setSelectAgents] = useState<string[]>([]); // [agentId]
   const [savable, setSavable] = useState<boolean>(false); // [agentId]
+  const [currentGroup, setCurrentGroup] = useState<IGroup | null>(group);
+
+  useEffect(() => {
+    setCurrentGroup(group);
+    setGroupName(group?.name);
+    setSelectAgents(group?.agents || []);
+  }, [group]);
 
   useEffect(() => {
     setSavable(groupName != undefined && groupName.length > 0 && selectAgents.length > 0);
@@ -44,7 +51,8 @@ const CreateGroupDialog: FC<{open: boolean, availableAgents: IAgent[], onSaved: 
 
   return (
     <Dialog open={open} onClose={onCancel}>
-      <DialogTitle>Create a new Group</DialogTitle>
+      {currentGroup && <DialogTitle>{`Edit ${groupName}`}</DialogTitle>}
+      {!currentGroup && <DialogTitle>Create a new Group</DialogTitle>}
       <DialogContent>
         <Stack
           sx={{ mt:2 }}
@@ -61,16 +69,17 @@ const CreateGroupDialog: FC<{open: boolean, availableAgents: IAgent[], onSaved: 
     </Dialog>);
 };
 
-  interface IGroup extends IRecord{
+interface IGroup extends IRecord{
   name: string,
   agents: string[],
   conversation: IMessage[],
 }
 
-const GroupPanel: FC<{groups: IGroup[], onGroupSelected: (group: IGroup) => void, onGroupDeleted: (group: IGroup) => void}> = ({groups, onGroupSelected, onGroupDeleted}) => {
+const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (group: IGroup) => void, onGroupUpdate: (groups: IGroup[]) => void}> = ({groups, agents, onGroupSelected, onGroupUpdate}) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [groupToDelete, setGroupToDelete] = useState<IGroup | null>(null);
   const [groupToEdit, setGroupToEdit] = useState<IGroup | null>(null);
+  const [openUpdateGroupDialog, setOpenUpdateGroupDialog] = useState<boolean>(false); // [agentId
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -83,12 +92,23 @@ const GroupPanel: FC<{groups: IGroup[], onGroupSelected: (group: IGroup) => void
     handleClose();
     console.log('delete group', group);
     setGroupToDelete(group);
-    // ask user to confirm
+  }
+
+  const onClickEditGroup = (group: IGroup) => {
+    handleClose();
+    setGroupToEdit(group);
+    setOpenUpdateGroupDialog(true);
   }
 
   const onConfirmDeleteGroup = () => {
-    onGroupDeleted(groupToDelete!);
+    onGroupUpdate(groups.filter(g => g.name !== groupToDelete?.name));
     setGroupToDelete(null);
+  }
+
+  const onEditGroupHandler = (group: IGroup) => {
+    handleClose();
+    setOpenUpdateGroupDialog(false);
+    onGroupUpdate(groups.map(g => g.name == groupToEdit?.name ? group : g));
   }
 
   const onCancelDeleteGroup = () => {
@@ -102,6 +122,13 @@ const GroupPanel: FC<{groups: IGroup[], onGroupSelected: (group: IGroup) => void
       message="Are you sure to delete this group?"
       onConfirm={onConfirmDeleteGroup}
       onCancel={onCancelDeleteGroup} />
+    <CreateOrEditGroupDialog
+      open={openUpdateGroupDialog && groupToEdit != null}
+      group={groupToEdit}
+      availableAgents={agents}
+      onCancel={() => setOpenUpdateGroupDialog(false)}
+      onSaved={onEditGroupHandler} />
+        
     <Menu
       variant='menu'
       MenuListProps={{
@@ -111,7 +138,7 @@ const GroupPanel: FC<{groups: IGroup[], onGroupSelected: (group: IGroup) => void
       open={open}
       onClose={handleClose}
       >
-      <MenuItem onClick={() => setAnchorEl(null)}>{`Edit ${groupToEdit?.name}`}</MenuItem>
+      <MenuItem onClick={() => onClickEditGroup(groupToEdit!)}>{`Edit ${groupToEdit?.name}`}</MenuItem>
       <MenuItem onClick={() => onClickDeleteGroup(groupToEdit!)}>Delete</MenuItem>
     </Menu>
     <List>
@@ -171,38 +198,6 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], onGroupsChange: (grou
     const [availableGroups, setAvailableGroups] = useState<IGroup[]>(groups);
     const [openCreateGroupDialog, setOpenCreateGroupDialog] = useState<boolean>(false);
 
-    const scrollToBottom = useCallback(() => {
-      if (autoScrollEnabled) {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        textareaRef.current?.focus();
-      }
-    }, [autoScrollEnabled]);
-
-    const handleScroll = () => {
-      if (chatContainerRef.current) {
-        const { scrollTop, scrollHeight, clientHeight } =
-          chatContainerRef.current;
-        const bottomTolerance = 30;
-
-        if (scrollTop + clientHeight < scrollHeight - bottomTolerance) {
-          setAutoScrollEnabled(false);
-        } else {
-          setAutoScrollEnabled(true);
-        }
-      }
-    };
-
-    const handleSettings = () => {
-      setShowSettings(!showSettings);
-    };
-
-    const scrollDown = () => {
-      if (autoScrollEnabled) {
-        messagesEndRef.current?.scrollIntoView(true);
-      }
-    };
-    const throttledScrollDown = throttle(scrollDown, 250);
-
     // init
     useEffect(() => {
       setAvailableGroups(groups);
@@ -220,16 +215,16 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], onGroupsChange: (grou
       if(newMessage){
         setCurrentConversation([...currentConversation!, newMessage]);
         onGroupsChange(availableGroups.map(group => group.name == currentGroup?.name ? {...group, conversation: [...group.conversation, newMessage]} : group));
-        agentExecutors.forEach(async (executor, i) => {
-          if(newMessage.from != currentGroup?.agents[i]){
+        if(newMessage.from == '__user'){
+          agentExecutors.forEach(async (executor, i) => {
             var response = await executor.call({'from': newMessage.from, 'content': newMessage.content});
-            var content = response['output'];
-            if(content?.length > 0){
-              var responseMessage: IMessage = { from: currentGroup?.agents[i]!, id: 'text/plain', content: content};
-              setNewMessage(responseMessage);
-            }
-          }
-        })
+              var content = response['output'];
+              if(content?.length > 0){
+                var responseMessage: IMessage = { from: currentGroup?.agents[i]!, id: 'text/plain', content: content};
+                setNewMessage(responseMessage);
+              }
+          })
+        }
       }
     }, [newMessage]);
 
@@ -253,6 +248,19 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], onGroupsChange: (grou
       onGroupsChange(availableGroups.filter(g => g.name !== group.name));
     };
 
+    const onHandleSelectGroup = (group: IGroup) => {
+      group.agents = group.agents.filter(agent => availableAgents.find(a => a.alias === agent));
+      setCurrentGroup(group);
+      setCurrentConversation(group.conversation);
+
+      // set agents
+      // if none of agents is available, alert user to add an agent first
+      var agents = group.agents.map(agent => availableAgents.find(a => a.alias === agent));
+      var agentExecutorProviders = agents.map(agent => getAgentExecutorProvider(agent!.id));
+      var agentExecutors = agentExecutorProviders.map((provider, i) => provider(agents[i]!, group.conversation));
+      setAgentExecutors(agentExecutors);
+    };
+
     return (
       <Box
         sx={{
@@ -262,78 +270,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], onGroupsChange: (grou
           height: "100%",
           backgroundColor: "background.default",
         }}>
-        {
-          availableGroups?.length > 0 &&
-          <Box
-          sx={{
-            width: "20%",
-            height: "100%",
-          }}>
-          <Box
-            sx={{
-              height: "90%",
-              overflow: "auto",
-            }}>
-          <GroupPanel
-            groups={availableGroups}
-            onGroupSelected={(group) =>
-            {
-              setCurrentGroup(group);
-              var agents = group.agents.map(agent => availableAgents.find(a => a.alias === agent));
-              var agentExecutorProviders = agents.map(agent => getAgentExecutorProvider(agent!.id));
-              var agentExecutors = agentExecutorProviders.map((provider, i) => provider(agents[i]!, group.conversation));
-              setAgentExecutors(agentExecutors);
-              setCurrentConversation(group.conversation);
-            }}
-            onGroupDeleted={onHandleDeleteGroup}/>
-            </Box>
-            <Box
-
-              sx={{
-                height: "10%",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-              }}>
-              <Button onClick={() => setOpenCreateGroupDialog(true)}>Create Group</Button>
-            </Box>
-        </Box>
-        }
-        <Divider orientation="vertical" flexItem />
-        <Box
-          sx={{
-            display: "flex",
-            flexGrow: 1,
-            maxWidth: "100%",
-            height: "100%",
-            flexDirection: "column",
-          }}>
-          {currentConversation ?
-            <List
-              sx={{
-                flexGrow: 1,
-                maxHeight: "100%",
-                overflow: "auto",
-                height: "80",
-              }}>
-
-            {currentConversation.map((message, index) => (
-              <Box
-                key={index}
-                sx={{
-                  marginTop: 2,
-                  marginRight: 5,
-                  marginLeft: 5,
-                }}>
-                <ChatMessage
-                  key={index}
-                  message={message}
-                  />
-                </Box>
-            ))}
-            <div
-              ref={messagesEndRef} />
-            </List> :
+        {currentConversation == undefined && availableGroups?.length == 0 &&
             <CentralBox
               sx={{
                 width: "100%",
@@ -363,7 +300,84 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], onGroupsChange: (grou
                 }
             </CentralBox>
           }
-          {currentGroup &&
+        {availableGroups?.length > 0 &&
+          <>
+          <Box
+          sx={{
+            width: "20%",
+            height: "100%",
+          }}>
+          <Box
+            sx={{
+              height: "90%",
+              overflow: "auto",
+            }}>
+          <GroupPanel
+            groups={availableGroups}
+            agents={availableAgents}
+            onGroupSelected={onHandleSelectGroup}
+            onGroupUpdate={onGroupsChange}/>
+            </Box>
+            <Box
+
+              sx={{
+                height: "10%",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}>
+              <Button onClick={() => setOpenCreateGroupDialog(true)}>Create Group</Button>
+            </Box>
+          </Box>
+          <Divider orientation="vertical" flexItem />
+          </>
+        }
+        <Box
+          sx={{
+            display: "flex",
+            flexGrow: 1,
+            maxWidth: "80%",
+            height: "100%",
+            flexDirection: "column",
+          }}>
+          { currentConversation && agentExecutors && agentExecutors.length > 0 &&
+            <List
+              sx={{
+                flexGrow: 1,
+                maxHeight: "100%",
+                overflow: "auto",
+                height: "80%",
+              }}>
+
+            {currentConversation.map((message, index) => (
+              <Box
+                key={index}
+                sx={{
+                  marginTop: 2,
+                  marginRight: 5,
+                  marginLeft: 5,
+                }}>
+                <ChatMessage
+                  key={index}
+                  message={message}
+                  />
+                </Box>
+            ))}
+            <div
+              ref={messagesEndRef} />
+            </List>
+          }
+          {currentGroup && currentGroup.agents.length == 0 && 
+          <CentralBox
+            sx={{
+              width: "100%",
+              height: "100%",
+            }}>
+              <Typography variant="h4">{`No agent available in ${currentGroup.name}, add agent first`}</Typography>
+          </CentralBox>
+            }
+          
+          {currentGroup && agentExecutors && agentExecutors.length > 0 &&
           <Box
             sx={{
               padding: 5,
@@ -377,9 +391,10 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], onGroupsChange: (grou
           </Box>
           }
         </Box>
-        <CreateGroupDialog
+        <CreateOrEditGroupDialog
                   open={openCreateGroupDialog}
                   availableAgents={availableAgents}
+                  group={null}
                   onCancel={() => setOpenCreateGroupDialog(false)}
                   onSaved={onHandleCreateGroup} />
       </Box>
