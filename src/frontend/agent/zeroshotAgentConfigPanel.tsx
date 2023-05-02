@@ -5,13 +5,13 @@ import { EditableSavableTextField, EditableSelectField } from '@/components/Glob
 import { Chip, Divider, Stack } from '@mui/material';
 import { getConfigPanelProvider, hasConfigPanelProvider } from '@/utils/app/configPanelProvider';
 import React from 'react';
-import { IModelMetaData } from '@/model/type';
+import { IModel } from '@/types/model';
 
 export const ZeroshotAgentConfigPanel: configPanelProviderType<IZeroshotAgent> = (agent, onAgentConfigChanged) => {
-    const [selectedLLMModelID, setSelectedLLMModelID] = React.useState(agent.llm?.id);
+    const [selectedLLMModelID, setSelectedLLMModelID] = React.useState(agent.llm?.type);
     const [llm, setLLM] = React.useState(agent.llm);
     const availableLLMModels = getAvailableLLMs();
-    const LLMSettingPanel = (props: {model: IModelMetaData, onChange: (model: IModelMetaData) => void}) => {
+    const LLMSettingPanel = (props: {model: IModel, onChange: (model: IModel) => void}) => {
         if(selectedLLMModelID != undefined && hasConfigPanelProvider(selectedLLMModelID)){
             return getConfigPanelProvider(selectedLLMModelID)(props.model, props.onChange);
         }
@@ -20,8 +20,8 @@ export const ZeroshotAgentConfigPanel: configPanelProviderType<IZeroshotAgent> =
 
     React.useEffect(() => {
         // create default llm config
-        if(selectedLLMModelID != agent.llm?.id && selectedLLMModelID != undefined){
-            var newLLM: IModelMetaData = {id: selectedLLMModelID};
+        if(selectedLLMModelID != agent.llm?.type && selectedLLMModelID != undefined){
+            var newLLM: IModel = {type: selectedLLMModelID};
             setLLM(newLLM);
             onAgentConfigChanged({...agent, llm: newLLM});
         }

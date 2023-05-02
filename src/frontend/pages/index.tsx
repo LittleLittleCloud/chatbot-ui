@@ -1,8 +1,8 @@
-import { Chat, IAgent, IGroup } from '@/components/Chat/Chat';
+import { Chat } from '@/components/Chat/Chat';
 import { Chatbar } from '@/components/Chatbar/Chatbar';
 import { Navbar } from '@/components/Mobile/Navbar';
 import { Promptbar } from '@/components/Promptbar/Promptbar';
-import { ChatBody, Conversation, Message } from '@/types/chat';
+import { Message } from '@/types/chat';
 import { KeyValuePair } from '@/types/data';
 import { ErrorMessage } from '@/types/error';
 import { Folder, FolderType } from '@/types/folder';
@@ -21,17 +21,17 @@ import {
 import { saveFolders } from '@/utils/app/folders';
 import { exportData, importData } from '@/utils/app/importExport';
 import { savePrompts } from '@/utils/app/prompts';
-import { AppBar, Button, Toolbar, Typography, Box, createTheme, Divider, Stack, Tooltip, IconButton, Avatar, Menu, MenuItem } from '@mui/material';
+import { AppBar, Button, Toolbar, Typography, Box, createTheme, Divider, Stack, Tooltip, IconButton, Avatar, Menu, MenuItem, Chip } from '@mui/material';
 import { IconArrowBarLeft, IconArrowBarRight } from '@tabler/icons-react';
 import { GetServerSideProps, GetStaticProps } from 'next';
 import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import Head from 'next/head';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import Models, { IModelConfig } from '../components/Model/model';
 import { ThemeProvider } from '@emotion/react';
-import { IModelMetaData } from '@/model/type';
+import { IModel } from '@/types/model';
 import { BaseLLM, LLM } from "langchain/dist/llms/base";
 import { GPT_35_TURBO, TextDavinci003 } from '@/model/azure/GPT';
 import '@/utils/app/setup';
@@ -40,14 +40,28 @@ import { IStorage } from '@/types/storage';
 import SettingsIcon from '@mui/icons-material/Settings';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import { groupReducer } from '@/utils/app/groupReducer';
+import { IAgent } from '@/types/agent';
+import { agentReducer } from '@/utils/app/agentReducer';
+import getConfig from 'next/config';
+
+const { publicRuntimeConfig } = getConfig();
 const Home: React.FC<IStorage> = () => {
   const { t } = useTranslation('chat');
-  // STATE ----------------------------------------------
-  const [storage, setStorage] = useState<IStorage>({ groups: [], agents: [], id: 'storage' });
-  const [availableGroups, setGroups] = useState<IGroup[]>(storage.groups);
-  const [availableAgents, setAgents] = useState<IAgent[]>(storage.agents);
-  const [lightMode, setLightMode] = useState<'dark' | 'light'>('dark');
   const [hasChange, setHasChange] = useState<boolean>(false);
+  // STATE ----------------------------------------------
+  const [storage, setStorage] = useState<IStorage>({ groups: [], agents: [], type: 'storage' });
+  const [availableGroups, groupDispatch] = useReducer<typeof groupReducer>((group, action) =>{
+    const newGroup = groupReducer(group, action);
+    setHasChange(true);
+    return newGroup;
+  }, storage.groups);
+  const [availableAgents, agentDispatcher] = useReducer<typeof agentReducer>((agents, action) => {
+    const newAgents = agentReducer(agents, action);
+    setHasChange(true);
+    return newAgents;
+  }, storage.agents);
+  const [lightMode, setLightMode] = useState<'dark' | 'light'>('dark');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [isInit, setIsInit] = useState<boolean>(false);
@@ -56,9 +70,6 @@ const Home: React.FC<IStorage> = () => {
 
   const [folders, setFolders] = useState<Folder[]>([]);
 
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] =
-    useState<Conversation>();
   const [currentMessage, setCurrentMessage] = useState<Message>();
 
   const [showSidebar, setShowSidebar] = useState<boolean>(true);
@@ -99,7 +110,16 @@ const Home: React.FC<IStorage> = () => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const data: IStorage = JSON.parse(event.target?.result as string);
-      setStorage(data);
+      // load agents
+      data.agents.forEach((agent) => {
+        agentDispatcher({ type: 'addOrUpdate', payload: agent });
+      });
+
+      // load groups
+      data.groups.forEach((group) => {
+        groupDispatch({ type: 'addOrUpdate', payload: group });
+      });
+
       setIsMenuOpen(false);
     };
 
@@ -108,6 +128,7 @@ const Home: React.FC<IStorage> = () => {
 
   useEffect(() => {
     if(isSaving){
+      console.log('saving');
       localStorage.setItem('storage', JSON.stringify(storage));
       setHasChange(false);
       setIsSaving(false);
@@ -115,10 +136,8 @@ const Home: React.FC<IStorage> = () => {
   }, [isSaving]);
 
   useEffect(() => {
-    console.log('storage', storage);
-    setGroups(storage.groups);
-    setAgents(storage.agents);
-  }, [storage]);
+    setStorage({ groups: availableGroups, agents: availableAgents, type: 'storage' });
+  }, [availableGroups, availableAgents]);
 
   const tabs = ['Chat', 'Agent']
   const settings = ['Import', 'Export'];
@@ -155,12 +174,21 @@ const Home: React.FC<IStorage> = () => {
           }}>
           <AppBar position='static' >
           <Toolbar variant="regular">
-            <Typography
-              variant="h6"
-              component="div"
-              sx={{ flexGrow: 1, display: { xs: 'none', sm: 'block' } }}>
-              LLM Chat
-            </Typography>
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{
+                flexGrow: 1,
+              }}>
+              <Typography
+                variant="h6"
+                component="div">
+                LLM Chat
+              </Typography>
+              <Chip
+                size='medium'
+                label={`${publicRuntimeConfig.version}`} />
+            </Stack>
             <Stack direction="row" spacing={2}>
               {hasChange && <Button variant='outlined' onClick={() => setIsSaving(true)}>save</Button>}
               {
@@ -224,19 +252,13 @@ const Home: React.FC<IStorage> = () => {
           <Chat
             groups={availableGroups}
             agents={availableAgents}
-            onGroupsChange={(groups) => {
-              setStorage({ ...storage, groups });
-              setHasChange(true);
-            }}
+            groupDispatch={groupDispatch}
           />
         }
         {selectedTab == 'Agent' && (
           <AgentPage
-            agents={availableAgents}
-            onAgentsChanged={(agents) => {
-              setStorage({ ...storage, agents });
-              setHasChange(true);
-            }}
+            availableAgents={availableAgents}
+            agentDispatcher={agentDispatcher}
             />
         )}
       </Box>

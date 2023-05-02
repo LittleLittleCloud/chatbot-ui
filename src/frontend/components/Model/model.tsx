@@ -1,7 +1,7 @@
 // config page for all available models
 
 import { Key } from "@/components/Settings/Key";
-import { IModelMetaData } from "@/model/type";
+import { IModel } from "@/model/type";
 import { Grid, Stack, TextField, Card, CardContent, CardHeader, Avatar, Typography, CardActions, Button, Box, Container, Divider, Chip, Collapse, Icon } from "@mui/material";
 import { useEffect, useState } from "react";
 import { BaseLLM, LLM } from "langchain/dist/llms/base";
@@ -13,7 +13,7 @@ import { getConfigPanelProvider, hasConfigPanelProvider, registerConfigPanelProv
 interface IModelConfig{
     avatar: string;
     alias: string;
-    model: IModelMetaData;
+    model: IModel;
 }
 
 interface ModelConfigProps {

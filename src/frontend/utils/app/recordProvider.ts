@@ -12,7 +12,7 @@ export function registerRecordMap<T extends IRecord>(name: string, recordMap: Re
 }
 
 export function extractRecord<T extends IRecord>(instance: T) : IRecord{
-    var map = recordMaps[instance.id];
+    var map = recordMaps[instance.type];
     var extractor = extract<IRecord>(map);
     return extractor(instance);
 }

@@ -66,8 +66,8 @@ export const ChatInput: FC<Props> = ({
       alert(t('Please enter a message'));
       return;
     }
-
-    onSend({ from: '__user', content, id: 'text/plain' });
+    var now = Date.now();
+    onSend({ from: '__user', content, type: 'text/plain', timestamp: now });
     setContent('');
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {

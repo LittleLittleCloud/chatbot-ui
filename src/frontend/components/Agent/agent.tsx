@@ -1,4 +1,5 @@
 import {
+    Dispatch,
     FC,
     memo,
     MutableRefObject,
@@ -17,17 +18,28 @@ import { ReactElement } from 'react-markdown/lib/react-markdown';
 import { hasAgentExecutorProvider } from '@/utils/app/agentProvider';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
+import { AgentAction } from '@/utils/app/agentReducer';
 
-const CreateAgentDialog = (props: {open: boolean, onClose: () => void, onAgentCreated: (agent: IAgent) => void}) => {
+const CreateAgentDialog = (props: {open: boolean, onClose: () => void, agentDispatcher: Dispatch<AgentAction>}) => {
     const [alias, setAlias] = useState("");
     const [agentID, setAgentID] = useState<string | null>(null);
     const availableAgents = getAvailableAgents();
     const [isSavable, setIsSavable] = useState(false);
 
-
     useEffect(() => {
         setIsSavable(alias != "" && agentID != null);
     }, [alias, agentID]);
+
+    const onAgentCreatedHandler = (agent: IAgent) => {
+        try{
+            props.agentDispatcher({type: 'add', payload: agent});
+        }
+        catch(err){
+            alert(err);
+            return;
+        }
+    };
+
     return (
         <Dialog open={props.open} onClose={props.onClose}>
             <DialogTitle>Create Agent</DialogTitle>
@@ -56,96 +68,56 @@ const CreateAgentDialog = (props: {open: boolean, onClose: () => void, onAgentCr
                 <Button onClick={props.onClose}>Cancel</Button>
                 <Button
                     disabled={!isSavable}
-                    onClick={() => props.onAgentCreated({id: agentID!, alias: alias, description: '', avatar: alias})}>Create</Button>
+                    onClick={() => onAgentCreatedHandler({type: agentID!, alias: alias, description: '', avatar: alias})}>Create</Button>
             </DialogActions>
         </Dialog>
     );
 }
 
-export const AgentPage: FC<{agents: IAgent[], onAgentsChanged: (agents: IAgent[]) => void}> = ({agents, onAgentsChanged}) => {
-    const [availableAgents, setAvailableAgents] = useState<IAgent[]>(agents);
-    const [selectedAgentID, setSelectedAgentID] = useState<string>();
+export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch<AgentAction>}> = ({availableAgents, agentDispatcher}) => {
     const [selectedAgent, setSelectedAgent] = useState<IAgent>();
-    const [selectedAgentIndex, setSelectedAgentIndex] = useState(-1);
     const [tab, setTab] = useState("1");
-    const [registeredAgents, setRegisteredAgents] = useState<string[]>(getAvailableAgents());
     const [onOpenCreateAgentDialog, setOpenCreateAgentDialog] = useState(false);
     const [onOpenSettingMenu, setOpenSettingMenu] = useState(-1);
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
     const [agentToDelete, setAgentToDelete] = useState<IAgent | null>(null);
+
+    const registeredAgents = getAvailableAgents();
     const handleClose = () => {
         setAnchorEl(null);
       };
 
-    useEffect(() => {
-        setAvailableAgents(agents);
-    }, [agents])
-
-    useEffect(() => {
-        if(selectedAgentIndex > -1){
-            console.log("selected agent index changed");
-            setSelectedAgentID(availableAgents[selectedAgentIndex].id);
-            setSelectedAgent(availableAgents[selectedAgentIndex]);
-        }
-    }, [selectedAgentIndex])
-
-    useEffect(() => {
-        if(selectedAgentID != selectedAgent?.id && selectedAgentID != undefined){
-            setSelectedAgent({id: selectedAgentID, alias: selectedAgent?.alias!, description: selectedAgent?.description!, avatar: selectedAgent?.avatar!});
-        }
-    }, [selectedAgentID]);
-
     const AgentAdvancedSettingPanel = (props: { agent: IAgent, onchange: (agent: IAgent) => void}) => {
-        if(!hasAgentConfigPannelProvider(props.agent.id)){
+        if(!hasAgentConfigPannelProvider(props.agent.type)){
             return <Typography>Not implemented</Typography>
         }
 
-        return getAgentConfigPannelProvider(props.agent.id)(props.agent, props.onchange);
+        return getAgentConfigPannelProvider(props.agent.type)(props.agent, props.onchange);
     }
 
-    const onAgentCreatedHandler = (agent: IAgent) => {
-        // check if agent already exists
-        if(availableAgents.find((a) => a.alias == agent.alias)){
-            alert("Agent already exists");
-        }
-
-        setAvailableAgents([...availableAgents, agent]);
-        setOpenCreateAgentDialog(false);
-    };
     const onCloseSettingMenu = () => {
         setOpenSettingMenu(-1);
         setAnchorEl(null);
     }
     const onAgentDeletedHandler = (agent: IAgent) => {
-        var agents = availableAgents.filter((a) => a.alias != agent.alias);
-        setAvailableAgents(agents);
-        onAgentsChanged(agents);
+        agentDispatcher({type: 'remove', payload: agent});
         setAgentToDelete(null);
         onCloseSettingMenu();
+    };
+
+    const onAgentUpdatedHandler = (agent: IAgent, original?: IAgent) => {
+        agentDispatcher({type: 'update', payload: agent, original: original});
+        setSelectedAgent(agent);
     };
 
     const onAgentCloneHandler = (agent: IAgent) => {
         // deep copy
         var clonedAgent = JSON.parse(JSON.stringify(agent)) as IAgent;
         clonedAgent.alias = clonedAgent.alias + " (clone)";
-        setAvailableAgents([...availableAgents, clonedAgent]);
-        onAgentsChanged([...availableAgents, clonedAgent]);
+        agentDispatcher({type: 'add', payload: clonedAgent});
         onCloseSettingMenu();
-    }
-
-    useEffect(() => {
-        if(selectedAgent){
-            const newAgents = availableAgents.map((agent, index) => {
-                if(index === selectedAgentIndex){
-                    return selectedAgent;
-                }
-                return agent;
-            })
-            setAvailableAgents(newAgents);
-            onAgentsChanged(newAgents);
-        }
-    }, [selectedAgent]);
+    };
 
     return (
         <Box
@@ -158,7 +130,7 @@ export const AgentPage: FC<{agents: IAgent[], onAgentsChanged: (agents: IAgent[]
                 overflow: "scroll",
             }}>
             <CreateAgentDialog
-                onAgentCreated={onAgentCreatedHandler}
+                agentDispatcher={agentDispatcher}
                 open={onOpenCreateAgentDialog}
                 onClose={() => setOpenCreateAgentDialog(false)} />
                     
@@ -219,7 +191,7 @@ export const AgentPage: FC<{agents: IAgent[], onAgentsChanged: (agents: IAgent[]
                 {availableAgents.map((agent, index) => 
                     <ListItem
                         key={index}
-                        onClick={() => setSelectedAgentIndex(index)}
+                        onClick={() => setSelectedAgent(availableAgents[index])}
                         secondaryAction = {
                             <IconButton
                                 onClick={(e) =>
@@ -277,12 +249,12 @@ export const AgentPage: FC<{agents: IAgent[], onAgentsChanged: (agents: IAgent[]
                     <TabPanel value="1">
                         <Stack
                             spacing={2}>
-                            <EditableSavableTextField name='alias' value={selectedAgent.alias} onChange={(value) => setSelectedAgent({...selectedAgent, alias: value!})}/>
-                            <EditableSelectField name='agent type' options={registeredAgents} value={selectedAgent.id} onChange={(value) => setSelectedAgent({...selectedAgent, id: value!})}/>
+                            <EditableSavableTextField name='alias' value={selectedAgent.alias} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, alias: value}, selectedAgent)}/>
+                            <EditableSelectField name='agent type' options={registeredAgents} value={selectedAgent.type} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, type: value!})}/>
                         </Stack>
                     </TabPanel>
                     <TabPanel value="2">
-                        <AgentAdvancedSettingPanel agent={selectedAgent} onchange={(value) => setSelectedAgent(value)}  />
+                        <AgentAdvancedSettingPanel agent={selectedAgent} onchange={(value) => onAgentUpdatedHandler(value, selectedAgent)}  />
                     </TabPanel>
                     <TabPanel value="3">
                         <Typography>Try it out</Typography>

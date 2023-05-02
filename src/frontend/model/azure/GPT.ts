@@ -1,5 +1,5 @@
 import { BaseLLM, BaseLLMParams, LLM } from "langchain/llms/base";
-import { IModelMetaData } from "../type";
+import { IModel } from '@/types/model';
 import { IJsonConverter, extract } from "@/utils/app/convertJson";
 import { injectable } from "inversify";
 import { registerProvider } from "@/utils/app/llmProvider";
@@ -8,7 +8,6 @@ import { RecordMap } from "@/utils/app/recordProvider";
 
 // azure openai gpt parameters
 interface IGPTBaseModelConfiguration {
-    id: string;
     resourceName?: string,
     deploymentID?: string,
     apiKey?: string,
@@ -23,7 +22,6 @@ interface IGPTBaseModelConfiguration {
 }
 
 interface IGPTModelOutput{
-    id: string;
     object: string;
     created: number;
     model: string;
@@ -39,7 +37,7 @@ interface IGPTModelOutput{
 }
 
 abstract class GPTBase extends LLM implements IGPTBaseModelConfiguration{
-    abstract id: string;
+    abstract type: string;
     apiKey?: string;
     temperature: number;
     resourceName?: string;
@@ -102,12 +100,12 @@ abstract class GPTBase extends LLM implements IGPTBaseModelConfiguration{
     }
 }
 
-interface IGPT35Turbo extends IGPTBaseModelConfiguration, IModelMetaData{
+interface IGPT35Turbo extends IGPTBaseModelConfiguration, IModel{
 }
 
 class GPT_35_TURBO extends GPTBase {
     description = "The ChatGPT model (gpt-35-turbo) is a language model designed for conversational interfaces and the model behaves differently than previous GPT-3 models. Previous models were text-in and text-out, meaning they accepted a prompt string and returned a completion to append to the prompt. However, the ChatGPT model is conversation-in and message-out. The model expects a prompt string formatted in a specific chat-like transcript format, and returns a completion that represents a model-written message in the chat."
-    id = "azure.gpt-35-turbo";
+    type = "azure.gpt-35-turbo";
 
     constructor(fields: Partial<IGPT35Turbo>){
         super(fields ?? {});
@@ -115,15 +113,15 @@ class GPT_35_TURBO extends GPTBase {
     }
 
     _llmType(): string {
-        return this.id;
+        return this.type;
     }
 }
 
-interface ITextDavinci003 extends IGPTBaseModelConfiguration, IModelMetaData{
+interface ITextDavinci003 extends IGPTBaseModelConfiguration, IModel{
 }
 
 const TextDavinci003Record : RecordMap<ITextDavinci003> = {
-    id: true,
+    type: true,
     resourceName: true,
     deploymentID: true,
     apiKey: true,
@@ -141,7 +139,7 @@ const TextDavinci003Record : RecordMap<ITextDavinci003> = {
 class TextDavinci003 extends GPTBase {
     description = `Davinci is the most capable model and can perform any task the other models can perform, often with less instruction. For applications requiring deep understanding of the content, like summarization for a specific audience and creative content generation, Davinci produces the best results. The increased capabilities provided by Davinci require more compute resources, so Davinci costs more and isn't as fast as other models.
     Another area where Davinci excels is in understanding the intent of text. Davinci is excellent at solving many kinds of logic problems and explaining the motives of characters. Davinci has been able to solve some of the most challenging AI problems involving cause and effect.`
-    id = "azure.text-davinci-003";
+    type = "azure.text-davinci-003";
 
     constructor(fields: Partial<ITextDavinci003>){
         super(fields ?? {});
@@ -149,7 +147,7 @@ class TextDavinci003 extends GPTBase {
     }
 
     _llmType(): string {
-        return this.id;
+        return this.type;
     }
 }
 

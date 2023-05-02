@@ -1,12 +1,12 @@
 import { IModelConfig } from "@/components/Model/model";
-import { IModelMetaData } from "@/model/type";
+import { IModel } from "@/types/model";
 import { Container } from "inversify";
 import { LLM } from "langchain/llms/base";
 
 const llmContainer: Container = new Container();
 const availableLLMs: string[] = [];
 
-export function registerProvider<T extends IModelMetaData>(id: string, provider: (model: T) => LLM){
+export function registerProvider<T extends IModel>(id: string, provider: (model: T) => LLM){
     if(!availableLLMs.includes(id)){
         availableLLMs.push(id);
     }
@@ -14,15 +14,15 @@ export function registerProvider<T extends IModelMetaData>(id: string, provider:
     llmContainer.bind<(model: T) => LLM>(id).toConstantValue(provider);
 }
 
-export function getProvider<T extends IModelMetaData>(model: T): (model: T) => LLM{
-    return llmContainer.get<(model: T) => LLM>(model.id);
+export function getProvider<T extends IModel>(model: T): (model: T) => LLM{
+    return llmContainer.get<(model: T) => LLM>(model.type);
 }
 
-export function hasProvider(model: IModelMetaData){
-    return availableLLMs.includes(model.id);
+export function hasProvider(model: IModel){
+    return availableLLMs.includes(model.type);
 }
 
-export function createLLM(model: IModelMetaData){
+export function createLLM(model: IModel){
     if(!hasProvider(model)){
         throw new Error(`No provider for model ${model.id}`);
     }

@@ -1,10 +1,13 @@
 const { i18n } = require('./next-i18next.config');
-
+const { version } = require('./package.json');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // i18n,
   output: 'export',
   reactStrictMode: true,
+  publicRuntimeConfig: {
+    version,
+  },
   webpack(config, { isServer, dev }) {
     config.experiments = {
       asyncWebAssembly: true,

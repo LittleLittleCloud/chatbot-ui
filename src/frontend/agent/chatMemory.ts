@@ -9,7 +9,7 @@ export class ChatMemory extends BaseMemory{
     fromKey = "from";
     contentKey = "content";
     outputKey = "output";
-    chatHistory: IMessage[] = [];
+    chatHistory: Omit<IMessage, 'timestamp'>[] = [];
 
     constructor({memoryKey, fromKey, contentKey, outputKey, history}: {memoryKey?: string, fromKey?: string, contentKey?: string, outputKey?: string, history?: IMessage[]} = {}){
         super();
@@ -34,15 +34,15 @@ export class ChatMemory extends BaseMemory{
         console.log(outputValues);
         var from: string = inputValues[this.fromKey];
         var content: string = inputValues[this.contentKey];
-        this.chatHistory.push({from: from, content: content, id: 'text/plain'});
+        this.chatHistory.push({from: from, content: content, type: 'text/plain'});
         var output = outputValues["response"];
         if(output){
-            this.chatHistory.push({from: this.outputKey, content: output, id: 'text/plain'});
+            this.chatHistory.push({from: this.outputKey, content: output, type: 'text/plain'});
         }
     }
 
     async loadMemoryVariables(_values: InputValues): Promise<MemoryVariables> {
-        var history: string[] = this.chatHistory.map((message: IMessage) => `${message.from}:${message.content}`);
+        var history: string[] = this.chatHistory.map((message) => `${message.from}:${message.content}`);
         return {
             [this.memoryKey]: history.join('\n')
         };

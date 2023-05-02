@@ -1,4 +1,3 @@
-import { IModelMetaData } from "@/model/type";
 import { IAgent } from "@/types/agent";
 import { getProvider } from "@/utils/app/llmProvider";
 import { Agent, ChatAgent, ZeroShotAgent, initializeAgentExecutor, AgentExecutor, Tool, LLMSingleActionAgent, AgentActionOutputParser } from "langchain/agents";
@@ -10,8 +9,9 @@ import { BasePromptTemplate, BaseStringPromptTemplate, SerializedBasePromptTempl
 import { RecordMap } from "@/utils/app/recordProvider";
 import { LLMChain } from "langchain";
 import { IMessage } from "@/types/chat";
+import { IModel } from "@/types/model";
 interface IZeroshotAgent extends IAgent {
-    llm?: IModelMetaData;
+    llm?: IModel;
     // todo: tools
     suffixPrompt?: string;
     prefixPrompt?: string;

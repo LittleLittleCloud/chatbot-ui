@@ -1,16 +1,16 @@
 import { IModelConfig } from "@/components/Model/model";
-import { IModelMetaData } from "@/model/type";
+import { IModel } from "@/model/type";
 import { Container } from "inversify";
 
 const container = new Container();
-export type providerType<T extends IModelMetaData> = (config: T, onConfigChange: (config: T) => void) => JSX.Element;
+export type providerType<T extends IModel> = (config: T, onConfigChange: (config: T) => void) => JSX.Element;
 
-export function registerConfigPanelProvider<T extends IModelMetaData>(id: string, provider: providerType<T>){
+export function registerConfigPanelProvider<T extends IModel>(id: string, provider: providerType<T>){
     container.bind<providerType<T>>(id).toConstantValue(provider);
 }
 
-export function getConfigPanelProvider(id: string): providerType<IModelMetaData>{
-    return container.get<providerType<IModelMetaData>>(id);
+export function getConfigPanelProvider(id: string): providerType<IModel>{
+    return container.get<providerType<IModel>>(id);
 }
 
 export function hasConfigPanelProvider(id: string){
