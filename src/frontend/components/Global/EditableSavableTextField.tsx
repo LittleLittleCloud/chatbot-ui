@@ -8,7 +8,7 @@ import {
     useState,
   } from 'react';
 
-import { Box, Select, InputLabel, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, MenuItem, FormControl, TextFieldProps, BaseTextFieldProps, SelectProps, Tooltip, IconButton, Slider } from '@mui/material';
+import { Box, Select, InputLabel, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, MenuItem, FormControl, TextFieldProps, BaseTextFieldProps, SelectProps, Tooltip, IconButton, Slider, ListItemBaseProps, ListItemProps } from '@mui/material';
 import styled from '@emotion/styled';
 import CheckIcon from '@mui/icons-material/Check';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -307,8 +307,27 @@ export const SmallNumberSetting = (props: {name: string, toolTip?: string, value
     )
 }
 
-
-
+export const SelectableListItem = (props: ListItemProps & {selected: boolean}) => {
+    return (
+        <CentralBox
+            sx={{
+                margin: '0.5rem',
+                padding: '0rem',
+                borderRadius: '1rem',
+                backgroundColor: props.selected ? '#1e1e1e' : 'background.default',
+            }}>
+        <ListItem
+            {...props}
+            selected={false}
+            sx={{
+              padding: '0rem',
+              margin: '0rem',
+              borderRadius: '1rem',
+            }}
+        />
+            </CentralBox>
+    )
+}
 
 export const SmallTextSetting = (props: {name: string, toolTip?: string, value?: string, onChange: (value: string) => void}) => {
     const [value, setValue] = useState(props.value);

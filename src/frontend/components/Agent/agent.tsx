@@ -12,7 +12,7 @@ import {
 import { Box, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, Tab, Tabs, DialogTitle, Dialog, DialogActions, DialogContent, DialogContentText, ListItemAvatar, IconButton, Menu, MenuItem } from '@mui/material';
 import { configPanelProviderType, getAgentConfigPannelProvider, getAvailableAgents, hasAgentConfigPannelProvider } from '@/utils/app/agentConfigPannelProvider';
 import { IAgent } from '@/types/agent';
-import { CentralBox, EditableSavableTextField, EditableSelectField, SettingSection, SmallSelectField, SmallSelectSetting, SmallTextField, SmallTextSetting } from '../Global/EditableSavableTextField';
+import { CentralBox, EditableSavableTextField, EditableSelectField, SelectableListItem, SettingSection, SmallSelectField, SmallSelectSetting, SmallTextField, SmallTextSetting } from '../Global/EditableSavableTextField';
 import { TabContext, TabPanel } from '@mui/lab';
 import { ReactElement } from 'react-markdown/lib/react-markdown';
 import { hasAgentExecutorProvider } from '@/utils/app/agentProvider';
@@ -189,7 +189,8 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
                 }}>
             <List>
                 {availableAgents.map((agent, index) => 
-                    <ListItem
+                    <SelectableListItem
+                        selected={selectedAgent?.alias == agent.alias}
                         key={index}
                         onClick={() => setSelectedAgent(availableAgents[index])}
                         secondaryAction = {
@@ -212,7 +213,7 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
                                 <Typography>{agent.alias}</Typography>
                             </ListItemText>
                         </ListItemButton>
-                    </ListItem>
+                    </SelectableListItem>
                 )}
             </List>
             </Box>

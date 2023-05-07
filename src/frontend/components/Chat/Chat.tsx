@@ -24,18 +24,19 @@ import { ChatMessage } from './ChatMessage';
 import { ErrorMessageDiv } from './ErrorMessageDiv';
 import { ModelSelect } from './ModelSelect';
 import { SystemPrompt } from './SystemPrompt';
-import { Alert, Avatar, Box, Button, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, List, ListItem, Menu, MenuItem, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Avatar, Box, Button, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, List, ListItem, ListItemButton, ListItemAvatar, ListItemText, Menu, MenuItem, Paper, Stack, Typography, AvatarGroup } from '@mui/material';
 import { IAgent } from '@/types/agent';
 import { AgentExecutor } from 'langchain/agents';
 import { getAgentExecutorProvider } from '@/utils/app/agentProvider';
 import { IRecord } from '@/types/storage';
-import { CentralBox, EditableSavableTextField, EditableSelectField, SmallMultipleSelectField, SmallSelectField, SmallTextField } from '../Global/EditableSavableTextField';
+import { CentralBox, EditableSavableTextField, EditableSelectField, SelectableListItem, SmallLabel, SmallMultipleSelectField, SmallSelectField, SmallTextField } from '../Global/EditableSavableTextField';
 import { getAvailableAgents } from '@/utils/app/agentConfigPannelProvider';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
 import { GroupAction, GroupCmd, groupReducer } from '@/utils/app/groupReducer';
 import { IGroup } from '@/types/group';
+import { groupEnd } from 'console';
 
 const CreateOrEditGroupDialog: FC<{open: boolean, group?: IGroup, agents: IAgent[], onSaved: (group: IGroup) => void, onCancel: () => void}> = ({open, group, agents, onSaved, onCancel}) => {
   const [groupName, setGroupName] = useState(group?.name);
@@ -84,7 +85,8 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [groupToDelete, setGroupToDelete] = useState<IGroup | null>(null);
   const [groupToEdit, setGroupToEdit] = useState<IGroup>();
-  const [openUpdateGroupDialog, setOpenUpdateGroupDialog] = useState<boolean>(false); // [agentId
+  const [openUpdateGroupDialog, setOpenUpdateGroupDialog] = useState<boolean>(false);
+  const [selectedGroup, setSelectedGroup] = useState<IGroup | null>(null);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -93,6 +95,12 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+  const handleGroupSelected = (group: IGroup) => {
+    setSelectedGroup(group);
+    onGroupSelected(group);
+  }
+  
   const onClickDeleteGroup = (group: IGroup) => {
     handleClose();
     console.log('delete group', group);
@@ -148,35 +156,55 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
     </Menu>
     <List>
       {groups.map((group, index) => (
-        <ListItem
+        <SelectableListItem
+          selected={selectedGroup?.name == group.name}
           key={index}
-          onClick={() => onGroupSelected(group)}
-          sx={{
-            "& .hidden-button": {
-              display: "flex",
-            },
-            "&:hover .hidden-button": {
-              display: "flex",
-            },
-          }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
-              <Avatar>{group.name[0]}</Avatar>
-              <Typography variant="h6">
-                {group.name}
-              </Typography>
-              <IconButton
-                id={`hidden-button`}
-                onClick={(e) => {
-                  setGroupToEdit(group);
-                  handleClick(e);
+          onClick={() => handleGroupSelected(group)}>
+          
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              width: '100%',
+            }}>
+            <Box
+              sx={{
+                display: 'flex',
+                width: '50%',
+              }}>
+              <AvatarGroup
+                spacing="small"
+                max={0}
+                total = {group.agents.length}>
+                {group.agents.map((agentId, index) => (
+                  <Avatar key={index} alt={agentId}>{agentId[0]}</Avatar>
+                ))}
+              </AvatarGroup>
+            </Box>
+            <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '40%',
+                  }}>
+                <SmallLabel>{group.name}</SmallLabel>
+            </Box>
+            <CentralBox
+                  sx={{
+                    width: '10%'
+                  }}>
+            <IconButton
+                onClick={(e) =>
+                {
+                    setGroupToEdit(group)
+                    handleClick(e)
                 }}
-                color="primary"
-                className="hidden-button"
-                aria-haspopup="true">
-                <MoreVertIcon fontSize='small'/>
-              </IconButton>
-            </Stack>
-        </ListItem>
+                className='hover-button' >
+                <MoreVertIcon />
+            </IconButton>
+            </CentralBox>
+          </Stack>
+        </SelectableListItem>
       ))}
     </List>
     </>
