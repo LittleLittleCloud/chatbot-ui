@@ -12,7 +12,7 @@ import {
 import { Box, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, Tab, Tabs, DialogTitle, Dialog, DialogActions, DialogContent, DialogContentText, ListItemAvatar, IconButton, Menu, MenuItem } from '@mui/material';
 import { configPanelProviderType, getAgentConfigPannelProvider, getAvailableAgents, hasAgentConfigPannelProvider } from '@/utils/app/agentConfigPannelProvider';
 import { IAgent } from '@/types/agent';
-import { CentralBox, EditableSavableTextField, EditableSelectField, SmallSelectField, SmallTextField } from '../Global/EditableSavableTextField';
+import { CentralBox, EditableSavableTextField, EditableSelectField, SettingSection, SmallSelectField, SmallSelectSetting, SmallTextField, SmallTextSetting } from '../Global/EditableSavableTextField';
 import { TabContext, TabPanel } from '@mui/lab';
 import { ReactElement } from 'react-markdown/lib/react-markdown';
 import { hasAgentExecutorProvider } from '@/utils/app/agentProvider';
@@ -241,20 +241,28 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
                     overflow: "scroll",
                 }}>
                     <TabContext value={tab}>
-                    <Tabs onChange={(e, v) =>setTab(v)} >
-                        <Tab label="General Setting" value="1" />
-                        <Tab label="Advanced Setting" value="2" />
-                        <Tab label="Try it out" value="3" />
+                    <Tabs
+                        value={tab}
+                        onChange={(e, v) =>setTab(v)}>
+                        <Tab label="Setting" value="1" />
+                        <Tab label="Try it out" value="2" />
                     </Tabs>
                     <TabPanel value="1">
                         <Stack
-                            spacing={2}>
-                            <EditableSavableTextField name='alias' value={selectedAgent.alias} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, alias: value}, selectedAgent)}/>
-                            <EditableSelectField name='agent type' options={registeredAgents} value={selectedAgent.type} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, type: value!})}/>
-                        </Stack>
-                    </TabPanel>
-                    <TabPanel value="2">
+                            direction="column"
+                            spacing={4}
+                            sx={{
+                                height: "100%",
+                                overflow: "scroll",
+                            }}>
+                        <SettingSection
+                            title="Basic Setting"
+                            toolTip="basic setting">
+                            <SmallTextSetting name="alias" toolTip='The name of the agent' value={selectedAgent.alias} />
+                            <SmallSelectSetting name='agent type' toolTip='the type of agent' options={registeredAgents} value={selectedAgent.type} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, type: value!})}/>
+                        </SettingSection>
                         <AgentAdvancedSettingPanel agent={selectedAgent} onchange={(value) => onAgentUpdatedHandler(value, selectedAgent)}  />
+                        </Stack>
                     </TabPanel>
                     <TabPanel value="3">
                         <Typography>Try it out</Typography>

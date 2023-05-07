@@ -1,7 +1,7 @@
 import { configPanelProviderType } from '@/utils/app/agentConfigPannelProvider';
 import { getAvailableLLMs, getProvider, hasProvider } from "@/utils/app/llmProvider";
 import { IZeroshotAgent } from './zeroshotAgent';
-import { EditableSavableTextField, EditableSelectField } from '@/components/Global/EditableSavableTextField';
+import { EditableSavableTextField, EditableSelectField, SettingSection, SmallMultipleSelectSetting, SmallSelectSetting, SmallTextSetting } from '@/components/Global/EditableSavableTextField';
 import { Chip, Divider, Stack } from '@mui/material';
 import { getConfigPanelProvider, hasConfigPanelProvider } from '@/utils/app/configPanelProvider';
 import React from 'react';
@@ -30,16 +30,21 @@ export const ZeroshotAgentConfigPanel: configPanelProviderType<IZeroshotAgent> =
     return (
         <Stack
             spacing={2}>
-            <EditableSavableTextField name='prefix prompt' value={agent.prefixPrompt} onChange={(value) => onAgentConfigChanged({...agent, prefixPrompt: value})}/>
-            <EditableSavableTextField name='suffix prompt' value={agent.suffixPrompt} onChange={(value) => onAgentConfigChanged({...agent, suffixPrompt: value})}/>
-            <EditableSelectField name='selected llm model' options={availableLLMModels} value={selectedLLMModelID} onChange={(value) => setSelectedLLMModelID(value)}/>
+            <SettingSection
+                title='prompt setting'
+                toolTip='prompt settings'>
+                <SmallTextSetting name='prefix prompt' value={agent.prefixPrompt} onChange={(value) => onAgentConfigChanged({...agent, prefixPrompt: value})}/>
+                <SmallTextSetting name='suffix prompt' value={agent.suffixPrompt} onChange={(value) => onAgentConfigChanged({...agent, suffixPrompt: value})}/>
+            </SettingSection>
             
-            {selectedLLMModelID && llm != undefined &&
-            <>
-                <Divider textAlign='left' >{`setting: ${selectedLLMModelID}`}</Divider>
-                <LLMSettingPanel model = {llm} onChange={(model) => onAgentConfigChanged({...agent, llm: model})}/>
-            </>
-            }
+            <SettingSection
+                    title='llm setting'
+                    toolTip='llm settings'>
+                    <SmallSelectSetting name='selected llm model' options={availableLLMModels} value={selectedLLMModelID} onChange={(value) => setSelectedLLMModelID(value)}/>
+                    {selectedLLMModelID && llm != undefined &&
+                        <LLMSettingPanel model = {llm} onChange={(model) => onAgentConfigChanged({...agent, llm: model})}/>
+                    }
+                </SettingSection>
         </Stack>
     )
 };
