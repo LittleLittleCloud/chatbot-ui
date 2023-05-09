@@ -1,7 +1,8 @@
 import { registerAgentExecutorProvider } from "@/utils/app/agentProvider";
-import { IZeroshotAgent, initializeZeroshotAgentExecutor } from "./zeroshotAgent";
+import { IZeroshotAgent, IZeroshotAgentMessage, initializeZeroshotAgentExecutor } from "./zeroshotAgent";
 import { registerAgentConfigPannelProvider } from "@/utils/app/agentConfigPannelProvider";
-import { ZeroshotAgentConfigPanel } from "./zeroshotAgentConfigPanel";
+import { ZeroshotAgentConfigPanel, ZeroshotMessage } from "./zeroshotAgentConfigPanel";
+import { registerMessageUIProvider } from "@/utils/app/configPanelProvider";
 
 registerAgentExecutorProvider<IZeroshotAgent>(
             "agent.chat",
@@ -10,3 +11,7 @@ registerAgentExecutorProvider<IZeroshotAgent>(
 registerAgentConfigPannelProvider<IZeroshotAgent>(
             "agent.chat",
             (agent, onConfigChange) => ZeroshotAgentConfigPanel(agent, onConfigChange));
+
+registerMessageUIProvider<IZeroshotAgentMessage>(
+            "message.zeroshot",
+            (message, onChange) => ZeroshotMessage(message, onChange));

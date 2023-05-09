@@ -25,7 +25,7 @@ import { ErrorMessageDiv } from './ErrorMessageDiv';
 import { ModelSelect } from './ModelSelect';
 import { SystemPrompt } from './SystemPrompt';
 import { Alert, Avatar, Box, Button, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, List, ListItem, ListItemButton, ListItemAvatar, ListItemText, Menu, MenuItem, Paper, Stack, Typography, AvatarGroup } from '@mui/material';
-import { IAgent } from '@/types/agent';
+import { IAgent, IAgentExcutor } from '@/types/agent';
 import { AgentExecutor } from 'langchain/agents';
 import { getAgentExecutorProvider } from '@/utils/app/agentProvider';
 import { IRecord } from '@/types/storage';
@@ -171,7 +171,7 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
             <Box
               sx={{
                 display: 'flex',
-                width: '50%',
+                width: '40%',
               }}>
               <AvatarGroup
                 spacing="small"
@@ -186,7 +186,7 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    width: '40%',
+                    width: '30%',
                   }}>
                 <SmallLabel>{group.name}</SmallLabel>
             </Box>
@@ -221,7 +221,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
     const { t } = useTranslation('chat');
     const [currentGroup, setCurrentGroup] = useState<IGroup>();
     const [currentConversation, setCurrentConversation] = useState<IMessage[]>();
-    const [agentExecutors, setAgentExecutors] = useState<AgentExecutor[]>([]);
+    const [agentExecutors, setAgentExecutors] = useState<IAgentExcutor[]>([]);
     const [newMessage, setNewMessage] = useState<IMessage>();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -239,12 +239,9 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
         if(newMessage.from == '__user'){
           agentExecutors.forEach(async (executor, i) => {
             console.log('executor', executor);
-            var response = await executor.call({'from': newMessage.from, 'content': newMessage.content});
-              var content = response['output'];
-              if(content?.length > 0){
-                var currentTimestamp = Date.now();
-                var responseMessage: IMessage = { from: currentGroup?.agents[i]!, type: 'text/plain', content: content, timestamp: currentTimestamp};
-                setNewMessage(responseMessage);
+            var response = await executor.call(newMessage);
+              if(response){
+                setNewMessage(response);
               }
           })
         }

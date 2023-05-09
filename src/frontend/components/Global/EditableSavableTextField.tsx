@@ -506,14 +506,21 @@ export const SmallMultipleSelectSetting = (props: {name: string, toolTip?: strin
     )
 };
 
-export const SmallLabel = styled('div')(({theme}) => ({
+export const Label = styled(Typography)(({theme}) => ({
     ...theme.typography.button,
-    color: theme.palette.text.secondary,
     textTransform: 'none',
-    fontSize: '1.1rem',
-    lineHeight: '1.5rem',
     overflow: 'auto',
     overflowWrap: 'break-word',
+}));
+
+export const SmallLabel = styled(Label)(({theme}) => ({
+    fontSize: '1.1rem',
+    lineHeight: '1.5rem',
+}));
+
+export const TinyLabel = styled(Label)(({theme}) => ({
+    fontSize: '0.8rem',
+    lineHeight: '1.2rem',
 }));
 
 export const SmallTextField = styled(TextField)<BaseTextFieldProps>(({theme}) => ({

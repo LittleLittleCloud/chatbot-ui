@@ -8,8 +8,13 @@ export interface Message {
 
 export type Role = 'assistant' | 'user';
 export interface IMessage extends IRecord{
-  timestamp: number;
+  timestamp?: number,
   from: string | '__user',
-  type: 'text/plain' | 'text/markdown',
-  content: string | Blob
+  type: string,
+  content: string | Blob,
+  prompt?: string,
+}
+
+export function IsUserMessage(message: IMessage): boolean{
+  return message.from === "__user";
 }

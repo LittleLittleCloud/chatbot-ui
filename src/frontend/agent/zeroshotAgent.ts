@@ -1,4 +1,4 @@
-import { IAgent } from "@/types/agent";
+import { IAgent, IAgentExcutor } from "@/types/agent";
 import { getProvider } from "@/utils/app/llmProvider";
 import { Agent, ChatAgent, ZeroShotAgent, initializeAgentExecutor, AgentExecutor, Tool, LLMSingleActionAgent, AgentActionOutputParser } from "langchain/agents";
 import { ConversationChain } from "langchain/chains";
@@ -10,6 +10,15 @@ import { RecordMap } from "@/utils/app/recordProvider";
 import { LLMChain } from "langchain";
 import { IMessage } from "@/types/chat";
 import { IModel } from "@/types/model";
+import { ConsoleCallbackHandler } from "langchain/callbacks";
+
+export interface IZeroshotAgentMessage extends IMessage{
+  type: 'message.zeroshot',
+  prompt: string,
+  scratchpad: string,
+  error?: string,
+}
+
 interface IZeroshotAgent extends IAgent {
     llm?: IModel;
     // todo: tools
@@ -89,7 +98,36 @@ class CustomPromptTemplate extends BaseStringPromptTemplate {
     }
   }
 
-export function initializeZeroshotAgentExecutor(agent: IZeroshotAgent, history?: IMessage[]): AgentExecutor {
+class ZeroshotAgentExcutor implements IAgentExcutor{
+    agentExecutor: AgentExecutor;
+    agent: IZeroshotAgent;
+    constructor(agentExecutor: AgentExecutor, agent: IZeroshotAgent){
+        this.agentExecutor = agentExecutor;
+        this.agent = agent;
+    }
+    async call(message: IMessage): Promise<IZeroshotAgentMessage> {
+      try{
+        var reply = await this.agentExecutor.call({from: message.from, content: message.content});
+        return {
+          type: 'message.zeroshot',
+          from: this.agent.alias,
+          content: reply["output"],
+          timestamp: Date.now(),
+        };
+      }
+      catch(e){
+        return {
+          type: 'message.zeroshot',
+          from: this.agent.alias,
+          content: '',
+          timestamp: Date.now(),
+          error: e.toString(),
+        };
+      }
+    }
+}
+
+export function initializeZeroshotAgentExecutor(agent: IZeroshotAgent, history?: IMessage[]): IAgentExcutor {
     if (!agent.llm) {
         throw new Error("No llm provided");
     }
@@ -114,8 +152,10 @@ export function initializeZeroshotAgentExecutor(agent: IZeroshotAgent, history?:
         llmChain: chatChain,
         outputParser: new CustomOutputParser(),
     });
-    var executor = AgentExecutor.fromAgentAndTools({agent: singleActionAgent, tools: [], verbose: true});
-    return executor;
+    const handler = new ConsoleCallbackHandler();
+    var executor = AgentExecutor.fromAgentAndTools({agent: singleActionAgent, tools: [], verbose: true, callbacks: [handler]});
+    var agentExecutor = new ZeroshotAgentExcutor(executor, agent);
+    return agentExecutor;
 }
 
 export type { IZeroshotAgent };

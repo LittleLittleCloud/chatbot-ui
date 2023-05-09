@@ -1,16 +1,15 @@
-import { IAgent } from "@/types/agent";
+import { IAgent, IAgentExcutor } from "@/types/agent";
 import { IMessage } from "@/types/chat";
 import { Container } from "inversify";
-import { Agent, initializeAgentExecutor, AgentExecutor } from "langchain/agents";
 const container = new Container();
-type providerType<T extends IAgent> = (agent: T, history?: IMessage[]) => AgentExecutor;
+type agentProviderType<T extends IAgent> = (agent: T, history?: IMessage[]) => IAgentExcutor;
 
-export function registerAgentExecutorProvider<T extends IAgent>(id: string, provider: providerType<T>){
-    container.bind<providerType<T>>(id).toConstantValue(provider);
+export function registerAgentExecutorProvider<T extends IAgent>(id: string, provider: agentProviderType<T>){
+    container.bind<agentProviderType<T>>(id).toConstantValue(provider);
 }
 
-export function getAgentExecutorProvider(id: string): providerType<IAgent>{
-    return container.get<providerType<IAgent>>(id);
+export function getAgentExecutorProvider(id: string): agentProviderType<IAgent>{
+    return container.get<agentProviderType<IAgent>>(id);
 }
 
 export function hasAgentExecutorProvider(id: string){
