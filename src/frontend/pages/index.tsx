@@ -44,23 +44,22 @@ import { groupReducer } from '@/utils/app/groupReducer';
 import { IAgent } from '@/types/agent';
 import { agentReducer } from '@/utils/app/agentReducer';
 import getConfig from 'next/config';
+import { storageReducer } from '@/utils/app/storageReducer';
 
 const { publicRuntimeConfig } = getConfig();
 const Home: React.FC<IStorage> = () => {
   const { t } = useTranslation('chat');
   const [hasChange, setHasChange] = useState<boolean>(false);
   // STATE ----------------------------------------------
-  const [storage, setStorage] = useState<IStorage>({ groups: [], agents: [], type: 'storage' });
-  const [availableGroups, groupDispatch] = useReducer<typeof groupReducer>((group, action) =>{
-    const newGroup = groupReducer(group, action);
+  const [storage, storageDispatcher] = useReducer<typeof storageReducer>((storage, action) => {
+    const newStorage = storageReducer(storage, action);
     setHasChange(true);
-    return newGroup;
-  }, storage.groups);
-  const [availableAgents, agentDispatcher] = useReducer<typeof agentReducer>((agents, action) => {
-    const newAgents = agentReducer(agents, action);
-    setHasChange(true);
-    return newAgents;
-  }, storage.agents);
+    return newStorage;
+  }, {type: 'storage', agents: [], groups: []} as IStorage);
+
+  const availableGroups = storage.groups;
+  const availableAgents = storage.agents;
+  
   const [lightMode, setLightMode] = useState<'dark' | 'light'>('dark');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
@@ -87,11 +86,13 @@ const Home: React.FC<IStorage> = () => {
     if(isInit) return;
     const storage = localStorage.getItem('storage');
     if (storage) {
-      setStorage(JSON.parse(storage));
+      console.log('load from storage');
+      storageDispatcher({ type: 'set', payload: JSON.parse(storage) });
     }
     setIsInit(false);
     console.log('init');
   }, []);
+
   // BASIC HANDLERS --------------------------------------------
 
   const handleLightMode = (mode: 'dark' | 'light') => {
@@ -110,16 +111,7 @@ const Home: React.FC<IStorage> = () => {
     const reader = new FileReader();
     reader.onload = (event) => {
       const data: IStorage = JSON.parse(event.target?.result as string);
-      // load agents
-      data.agents.forEach((agent) => {
-        agentDispatcher({ type: 'addOrUpdate', payload: agent });
-      });
-
-      // load groups
-      data.groups.forEach((group) => {
-        groupDispatch({ type: 'addOrUpdate', payload: group });
-      });
-
+      storageDispatcher({ type: 'set', payload: data });
       setIsMenuOpen(false);
     };
 
@@ -134,10 +126,6 @@ const Home: React.FC<IStorage> = () => {
       setIsSaving(false);
     }
   }, [isSaving]);
-
-  useEffect(() => {
-    setStorage({ groups: availableGroups, agents: availableAgents, type: 'storage' });
-  }, [availableGroups, availableAgents]);
 
   const tabs = ['Chat', 'Agent']
   const settings = ['Import', 'Export'];
@@ -252,13 +240,13 @@ const Home: React.FC<IStorage> = () => {
           <Chat
             groups={availableGroups}
             agents={availableAgents}
-            groupDispatch={groupDispatch}
+            storageDispatcher={storageDispatcher}
           />
         }
         {selectedTab == 'Agent' && (
           <AgentPage
             availableAgents={availableAgents}
-            agentDispatcher={agentDispatcher}
+            storageDispatcher={storageDispatcher}
             />
         )}
       </Box>

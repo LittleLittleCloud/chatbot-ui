@@ -19,8 +19,9 @@ import { hasAgentExecutorProvider } from '@/utils/app/agentProvider';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
 import { AgentAction } from '@/utils/app/agentReducer';
+import { StorageAction } from '@/utils/app/storageReducer';
 
-const CreateAgentDialog = (props: {open: boolean, onClose: () => void, agentDispatcher: Dispatch<AgentAction>}) => {
+const CreateAgentDialog = (props: {open: boolean, onClose: () => void, storageDispatcher: Dispatch<StorageAction>}) => {
     const [alias, setAlias] = useState("");
     const [agentID, setAgentID] = useState<string | null>(null);
     const availableAgents = getAvailableAgents();
@@ -32,7 +33,7 @@ const CreateAgentDialog = (props: {open: boolean, onClose: () => void, agentDisp
 
     const onAgentCreatedHandler = (agent: IAgent) => {
         try{
-            props.agentDispatcher({type: 'add', payload: agent});
+            props.storageDispatcher({type: 'addAgent', payload: agent});
         }
         catch(err){
             alert(err);
@@ -74,7 +75,7 @@ const CreateAgentDialog = (props: {open: boolean, onClose: () => void, agentDisp
     );
 }
 
-export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch<AgentAction>}> = ({availableAgents, agentDispatcher}) => {
+export const AgentPage: FC<{availableAgents: IAgent[], storageDispatcher: Dispatch<StorageAction>}> = ({availableAgents, storageDispatcher}) => {
     const [selectedAgent, setSelectedAgent] = useState<IAgent>();
     const [tab, setTab] = useState("1");
     const [onOpenCreateAgentDialog, setOpenCreateAgentDialog] = useState(false);
@@ -101,13 +102,13 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
         setAnchorEl(null);
     }
     const onAgentDeletedHandler = (agent: IAgent) => {
-        agentDispatcher({type: 'remove', payload: agent});
+        storageDispatcher({type: 'removeAgent', payload: agent});
         setAgentToDelete(null);
         onCloseSettingMenu();
     };
 
     const onAgentUpdatedHandler = (agent: IAgent, original?: IAgent) => {
-        agentDispatcher({type: 'update', payload: agent, original: original});
+        storageDispatcher({type: 'updateAgent', payload: agent, original: original ?? selectedAgent});
         setSelectedAgent(agent);
     };
 
@@ -115,7 +116,7 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
         // deep copy
         var clonedAgent = JSON.parse(JSON.stringify(agent)) as IAgent;
         clonedAgent.alias = clonedAgent.alias + " (clone)";
-        agentDispatcher({type: 'add', payload: clonedAgent});
+        storageDispatcher({type: 'addAgent', payload: clonedAgent});
         onCloseSettingMenu();
     };
 
@@ -130,7 +131,7 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
                 overflow: "scroll",
             }}>
             <CreateAgentDialog
-                agentDispatcher={agentDispatcher}
+                storageDispatcher={storageDispatcher}
                 open={onOpenCreateAgentDialog}
                 onClose={() => setOpenCreateAgentDialog(false)} />
                     
@@ -259,8 +260,8 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
                         <SettingSection
                             title="Basic Setting"
                             toolTip="basic setting">
-                            <SmallTextSetting name="alias" toolTip='The name of the agent' value={selectedAgent.alias} />
-                            <SmallSelectSetting name='agent type' toolTip='the type of agent' options={registeredAgents} value={selectedAgent.type} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, type: value!})}/>
+                            <SmallTextSetting name="alias" toolTip='The name of the agent' value={selectedAgent.alias} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, alias: value!}, selectedAgent)} />
+                            <SmallSelectSetting name='agent type' toolTip='the type of agent' options={registeredAgents} value={selectedAgent.type} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, type: value!}, selectedAgent)}/>
                         </SettingSection>
                         <AgentAdvancedSettingPanel agent={selectedAgent} onchange={(value) => onAgentUpdatedHandler(value, selectedAgent)}  />
                         </Stack>

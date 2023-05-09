@@ -37,6 +37,7 @@ import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
 import { GroupAction, GroupCmd, groupReducer } from '@/utils/app/groupReducer';
 import { IGroup } from '@/types/group';
 import { groupEnd } from 'console';
+import { StorageAction } from '@/utils/app/storageReducer';
 
 const CreateOrEditGroupDialog: FC<{open: boolean, group?: IGroup, agents: IAgent[], onSaved: (group: IGroup) => void, onCancel: () => void}> = ({open, group, agents, onSaved, onCancel}) => {
   const [groupName, setGroupName] = useState(group?.name);
@@ -81,7 +82,7 @@ const CreateOrEditGroupDialog: FC<{open: boolean, group?: IGroup, agents: IAgent
     </Dialog>);
 };
 
-const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (group: IGroup) => void, groupDispatch: Dispatch<GroupAction>}> = ({groups, agents, onGroupSelected, groupDispatch}) => {
+const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (group: IGroup) => void, storageDispatcher: Dispatch<StorageAction>}> = ({groups, agents, onGroupSelected, storageDispatcher}) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [groupToDelete, setGroupToDelete] = useState<IGroup | null>(null);
   const [groupToEdit, setGroupToEdit] = useState<IGroup>();
@@ -114,14 +115,14 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
   }
 
   const onConfirmDeleteGroup = () => {
-    groupDispatch({type: 'remove', payload: groupToDelete!});
+    storageDispatcher({type: 'removeGroup', payload: groupToDelete!});
     setGroupToDelete(null);
   }
 
   const onEditGroupHandler = (group: IGroup) => {
     handleClose();
     setOpenUpdateGroupDialog(false);
-    groupDispatch({type: 'update', payload: group, original: groupToEdit!});
+    storageDispatcher({type: 'updateGroup', payload: group, original: groupToEdit!});
   }
 
   const onCancelDeleteGroup = () => {
@@ -211,11 +212,11 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
   )
 }
 
-export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispatch<GroupAction>}> =
+export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Dispatch<StorageAction>}> =
   ({
     groups,
     agents,
-    groupDispatch,
+    storageDispatcher,
   }) => {
     const { t } = useTranslation('chat');
     const [currentGroup, setCurrentGroup] = useState<IGroup>();
@@ -234,9 +235,10 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
     useEffect(() => {
       if(newMessage){
         setCurrentConversation([...currentConversation!, newMessage]);
-        groupDispatch({type: 'update', payload: {...currentGroup!, conversation: [...currentConversation!, newMessage]}})
+        storageDispatcher({type: 'updateGroup', payload: {...currentGroup!, conversation: [...currentConversation!, newMessage]}})
         if(newMessage.from == '__user'){
           agentExecutors.forEach(async (executor, i) => {
+            console.log('executor', executor);
             var response = await executor.call({'from': newMessage.from, 'content': newMessage.content});
               var content = response['output'];
               if(content?.length > 0){
@@ -252,7 +254,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
     const onHandleCreateGroup = (group: IGroup) => {
       // first check if the group already exists
       try{
-        groupDispatch({type: 'add', payload: group});
+        storageDispatcher({type: 'addGroup', payload: group});
       }
       catch(e){
         alert(e);
@@ -270,8 +272,9 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
       // set agents
       // if none of agents is available, alert user to add an agent first
       var _agents = group.agents.map(agent => agents.find(a => a.alias === agent));
+      console.log(_agents);
       var agentExecutorProviders = _agents.map(_agent => getAgentExecutorProvider(_agent!.type));
-      var agentExecutors = agentExecutorProviders.map((_agents, i) => _agents(agents[i]!, group.conversation));
+      var agentExecutors = agentExecutorProviders.map((_agent, i) => _agent(_agents[i]!, group.conversation));
       setAgentExecutors(agentExecutors);
     };
 
@@ -330,7 +333,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
             groups={groups}
             agents={agents}
             onGroupSelected={onHandleSelectGroup}
-            groupDispatch={groupDispatch}/>
+            storageDispatcher={storageDispatcher}/>
             </Box>
             <Box
 
