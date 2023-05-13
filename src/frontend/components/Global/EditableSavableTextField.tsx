@@ -431,6 +431,7 @@ export const SmallSelectSetting = (props: {name: string, toolTip?: string, value
         <Stack direction="row" spacing={1}>
             <Box
                 sx={{
+                    display: "flex",
                     alignItems: "center",
                     width: '20%',
                 }}>

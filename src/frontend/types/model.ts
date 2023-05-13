@@ -10,4 +10,4 @@ interface ILLMModel extends IModel{
     isChatModel: boolean;
 }
 
-export type {IModel as IModel}
+export type {IModel as IModel, ILLMModel}

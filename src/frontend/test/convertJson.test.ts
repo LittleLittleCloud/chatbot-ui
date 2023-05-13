@@ -1,4 +1,4 @@
-import { TextDavinci003, ITextDavinci003, TextDavinci003JsonConverter } from "@/model/azure/GPT";
+import { TextDavinci003, ITextDavinci003 } from "@/model/azure/GPT";
 import { Container } from "inversify";
 import {IJsonConverter} from "@/utils/app/convertJson";
 import { IModel } from '@/types/model';

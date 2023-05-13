@@ -1,3 +1,4 @@
+import { Callbacks } from "langchain/callbacks";
 import { IMessage } from "./chat";
 import { IRecord } from "./storage";
 
@@ -8,7 +9,7 @@ interface IAgent extends IRecord{
 }
 
 interface IAgentExcutor{
-    call(message: IMessage): Promise<IMessage>;
+    call(message: IMessage, callback?: Callbacks): Promise<IMessage>;
 }
 
 

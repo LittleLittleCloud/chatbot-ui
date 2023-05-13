@@ -1,19 +1,19 @@
 import { configPanelProviderType } from '@/utils/app/agentConfigPannelProvider';
-import { getAvailableLLMs, getProvider, hasProvider } from "@/utils/app/llmProvider";
+import { getAvailableLLMs, getLLMModelDefaultValue, getProvider, hasProvider } from "@/utils/app/llmProvider";
 import { IZeroshotAgent, IZeroshotAgentMessage } from './zeroshotAgent';
 import { EditableSavableTextField, EditableSelectField, SettingSection, SmallLabel, SmallMultipleSelectSetting, SmallSelectSetting, SmallTextSetting, TinyLabel } from '@/components/Global/EditableSavableTextField';
 import { Chip, Divider, Stack } from '@mui/material';
 import { getConfigPanelProvider, hasConfigPanelProvider, providerType } from '@/utils/app/configPanelProvider';
 import React from 'react';
-import { IModel } from '@/types/model';
+import { ILLMModel, IModel } from '@/types/model';
 
 export const ZeroshotAgentConfigPanel: configPanelProviderType<IZeroshotAgent> = (agent, onAgentConfigChanged) => {
     const [selectedLLMModelID, setSelectedLLMModelID] = React.useState(agent.llm?.type);
     const [llm, setLLM] = React.useState(agent.llm);
     const availableLLMModels = getAvailableLLMs();
-    const LLMSettingPanel = (props: {model: IModel, onChange: (model: IModel) => void}) => {
+    const LLMSettingPanel = (props: {model: ILLMModel, onChange: (model: ILLMModel) => void}) => {
         if(selectedLLMModelID != undefined && hasConfigPanelProvider(selectedLLMModelID)){
-            return getConfigPanelProvider(selectedLLMModelID)(props.model, props.onChange);
+            return getConfigPanelProvider(selectedLLMModelID)(props.model, (model: IModel) => props.onChange(model as ILLMModel));
         }
         return <></>;
     }
@@ -21,7 +21,7 @@ export const ZeroshotAgentConfigPanel: configPanelProviderType<IZeroshotAgent> =
     React.useEffect(() => {
         // create default llm config
         if(selectedLLMModelID != agent.llm?.type && selectedLLMModelID != undefined){
-            var newLLM: IModel = {type: selectedLLMModelID};
+            var newLLM: ILLMModel = getLLMModelDefaultValue(selectedLLMModelID);
             setLLM(newLLM);
             onAgentConfigChanged({...agent, llm: newLLM});
         }
