@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { BaseLLM, LLM } from "langchain/dist/llms/base";
 import { GPT_35_TURBO, TextDavinci003 } from "@/model/azure/GPT";
 import ChevronRightRoundedIcon from '@mui/icons-material/ChevronRightRounded';
-import { createLLM, hasProvider } from "@/utils/app/llmProvider";
+import { createLLM, hasLLMProvider } from "@/utils/app/llmProvider";
 import { getConfigPanelProvider, hasConfigPanelProvider, registerConfigPanelProvider } from "@/utils/app/configPanelProvider";
 
 interface IModelConfig{
@@ -71,7 +71,7 @@ const ModelConfigPanel: React.FC<ModelConfigProps> = ({modelConfig, onModelConfi
                 <Collapse in={editingStatus}>
                     {getConfigPanelProvider(modelConfig.model.id)(modelConfig.model, (model) => onModelConfigChanged({ ...modelConfig, model }))}
                 </Collapse>
-                {hasProvider(modelConfig.model) &&
+                {hasLLMProvider(modelConfig.model) &&
                 <>
                     <Divider>
                         {tryOutStatus ?

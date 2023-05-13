@@ -2,7 +2,6 @@ import { BaseLLM, BaseLLMParams, LLM } from "langchain/llms/base";
 import { ILLMModel, IModel } from '@/types/model';
 import { IJsonConverter, extract } from "@/utils/app/convertJson";
 import { injectable } from "inversify";
-import { registerProvider } from "@/utils/app/llmProvider";
 import { IRecord } from "@/types/storage";
 import { RecordMap } from "@/utils/app/recordProvider";
 import { CallbackManagerForLLMRun } from "langchain/callbacks";
@@ -95,7 +94,10 @@ abstract class GPTBase extends LLM{
                 stop: stop,
         })});
 
-        if(response.status != 200) throw new Error("Azure GPT API call failed " + await response.json());
+        if(response.status != 200){
+            var error = await response.json();
+            throw new Error(`Azure GPT API call failed. \r\n error code: ${error.error.code} \r\n error message: ${error.error.message}`);
+        }
         var modelOutput: IGPTModelOutput = await response.json();
         return modelOutput.choices[0].text;
     }

@@ -7,18 +7,6 @@ import { Container } from "inversify";
 const container = new Container();
 export type providerType<T extends IRecord> = (config: T, onConfigChange: (config: T) => void) => JSX.Element;
 
-export function registerConfigPanelProvider<T extends IModel>(id: string, provider: providerType<T>){
-    container.bind<providerType<T>>(id).toConstantValue(provider);
-}
-
-export function getConfigPanelProvider(id: string): providerType<IModel>{
-    return container.get<providerType<IModel>>(id);
-}
-
-export function hasConfigPanelProvider(id: string){
-    return container.isBound(id);
-}
-
 export function registerMessageUIProvider<T extends IMessage>(id: string, provider: providerType<T>){
     container.bind<providerType<T>>(id).toConstantValue(provider);
 }

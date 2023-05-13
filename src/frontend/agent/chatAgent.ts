@@ -1,6 +1,5 @@
 import { IAgent, IAgentExcutor } from "@/types/agent";
-import { getProvider } from "@/utils/app/llmProvider";
-import { Agent, ChatAgent, ZeroShotAgent, initializeAgentExecutor, AgentExecutor, LLMSingleActionAgent, AgentActionOutputParser } from "langchain/agents";
+import { Agent, ChatAgent, ZeroShotAgent, AgentExecutor, LLMSingleActionAgent, AgentActionOutputParser } from "langchain/agents";
 import { ConversationChain } from "langchain/chains";
 import {LLM} from "langchain/llms/base";
 import { ChatMemory } from "./chatMemory";
@@ -12,6 +11,7 @@ import { IMessage } from "@/types/chat";
 import { ILLMModel, IModel } from "@/types/model";
 import { CallbackManager, Callbacks, ConsoleCallbackHandler, LangChainTracer } from "langchain/callbacks";
 import { Tool } from "langchain/tools";
+import { getLLMProvider } from "@/utils/app/llmProvider";
 
 export interface IZeroshotAgentMessage extends IMessage{
   type: 'message.zeroshot',
@@ -20,36 +20,13 @@ export interface IZeroshotAgentMessage extends IMessage{
   error?: string,
 }
 
-interface IZeroshotAgent extends IAgent {
-    type: 'agent.zeroshot';
+interface IChatAgent extends IAgent {
+    type: 'agent.chat';
     llm?: ILLMModel;
     // todo: tools
     suffixPrompt?: string;
     prefixPrompt?: string;
 };
-
-class ReplyTool extends Tool{
-    llm: LLM;
-    constructor(llm: LLM){
-        super();
-        this.llm = llm;
-    }
-    protected async _call(arg: string): Promise<string> {
-        var reply = await this.llm.call(arg);
-
-        return reply;
-    }
-    name: string = "Reply";
-    description: string = "Reply question with whatever you find";
-}
-
-class DummyTool extends Tool{
-    protected async _call(arg: string): Promise<string> {
-        return '';
-    }
-    name: string = "Dummy";
-    description: string = "Dummy tool that does nothing";
-}
 
 class CustomOutputParser extends AgentActionOutputParser {
     async parse(text: string): Promise<AgentAction | AgentFinish> {
@@ -65,12 +42,14 @@ class CustomPromptTemplate extends BaseStringPromptTemplate {
     prefix: string;
     suffix: string;
     useChatML: boolean;
+    name: string;
   
-    constructor(args: { prefix: string, suffix: string, inputVariables: string[], useChatML: boolean}) {
+    constructor(args: IChatAgent & {inputVariables: string[]}) {
         super({ inputVariables: args.inputVariables });
-        this.prefix = args.prefix;
-        this.suffix = args.suffix;
-        this.useChatML = args.useChatML;
+        this.prefix = args.prefixPrompt!;
+        this.suffix = args.suffixPrompt!;
+        this.name = args.alias;
+        this.useChatML = args.llm?.isChatModel ?? false;
     }
   
     _getPromptType(): string {
@@ -79,7 +58,8 @@ class CustomPromptTemplate extends BaseStringPromptTemplate {
   
     format(input: InputValues): Promise<string> {
       /** Construct the final template */
-      const template = [this.prefix, this.suffix].join("\n\n");
+      var namePrompt = `You name is ${this.name}`;
+      const template = [namePrompt, this.prefix, this.suffix].join("\n\n");
       /** Construct the agent_scratchpad */
       const intermediateSteps = input.intermediate_steps as AgentStep[];
       const agentScratchpad = intermediateSteps.reduce(
@@ -97,7 +77,6 @@ class CustomPromptTemplate extends BaseStringPromptTemplate {
         <|im_end|>
         <|im_start|>assistant`;
       }
-      console.log(prompt);
       return Promise.resolve(prompt);
     }
   
@@ -110,10 +89,10 @@ class CustomPromptTemplate extends BaseStringPromptTemplate {
     }
   }
 
-class ZeroshotAgentExcutor implements IAgentExcutor{
+class ChatAgentExecutor implements IAgentExcutor{
     agentExecutor: AgentExecutor;
-    agent: IZeroshotAgent;
-    constructor(agentExecutor: AgentExecutor, agent: IZeroshotAgent){
+    agent: IChatAgent;
+    constructor(agentExecutor: AgentExecutor, agent: IChatAgent){
         this.agentExecutor = agentExecutor;
         this.agent = agent;
     }
@@ -139,11 +118,11 @@ class ZeroshotAgentExcutor implements IAgentExcutor{
     }
 }
 
-export function initializeZeroshotAgentExecutor(agent: IZeroshotAgent, history?: IMessage[]): IAgentExcutor {
+export function initializeChatAgentExecutor(agent: IChatAgent, history?: IMessage[]): IAgentExcutor {
     if (!agent.llm) {
         throw new Error("No llm provided");
     }
-    var llmProvider = getProvider(agent.llm!);
+    var llmProvider = getLLMProvider(agent.llm!);
     var llm = llmProvider(agent.llm!);
     var chatChain = new ConversationChain({
         llm: llm,
@@ -152,12 +131,7 @@ export function initializeZeroshotAgentExecutor(agent: IZeroshotAgent, history?:
             outputKey: agent.alias,
             useChatML: agent.llm?.isChatModel ?? false,
         }),
-        prompt: new CustomPromptTemplate({
-          prefix: agent.prefixPrompt!,
-          suffix: agent.suffixPrompt!,
-          inputVariables: ["history", "from", "content"],
-          useChatML: agent.llm?.isChatModel ?? false,
-        }),
+        prompt: new CustomPromptTemplate({...agent, inputVariables: ["history", "from", "content"]}),
     });
     var singleActionAgent = new LLMSingleActionAgent({
         llmChain: chatChain,
@@ -166,8 +140,8 @@ export function initializeZeroshotAgentExecutor(agent: IZeroshotAgent, history?:
     const handler = new ConsoleCallbackHandler();
     const tracer = new LangChainTracer();
     var executor = AgentExecutor.fromAgentAndTools({agent: singleActionAgent, tools: [], verbose: true, callbacks: [handler, tracer]});
-    var agentExecutor = new ZeroshotAgentExcutor(executor, agent);
+    var agentExecutor = new ChatAgentExecutor(executor, agent);
     return agentExecutor;
 }
 
-export type { IZeroshotAgent };
+export type { IChatAgent };

@@ -1,19 +1,19 @@
-import { configPanelProviderType } from '@/utils/app/agentConfigPannelProvider';
-import { getAvailableLLMs, getLLMModelDefaultValue, getProvider, hasProvider } from "@/utils/app/llmProvider";
-import { IZeroshotAgent, IZeroshotAgentMessage } from './zeroshotAgent';
+import { getAvailableLLMs, getLLMConfigUIProvider, getLLMModelDefaultValue, hasLLMProvider } from "@/utils/app/llmProvider";
+import { IChatAgent, IZeroshotAgentMessage } from './chatAgent';
 import { EditableSavableTextField, EditableSelectField, SettingSection, SmallLabel, SmallMultipleSelectSetting, SmallSelectSetting, SmallTextSetting, TinyLabel } from '@/components/Global/EditableSavableTextField';
 import { Chip, Divider, Stack } from '@mui/material';
-import { getConfigPanelProvider, hasConfigPanelProvider, providerType } from '@/utils/app/configPanelProvider';
+import { providerType } from '@/utils/app/configPanelProvider';
 import React from 'react';
 import { ILLMModel, IModel } from '@/types/model';
+import { agentConfigUIProvderType } from "@/utils/app/agentProvider";
 
-export const ZeroshotAgentConfigPanel: configPanelProviderType<IZeroshotAgent> = (agent, onAgentConfigChanged) => {
+export const ChatAgentConfigPanel: agentConfigUIProvderType<IChatAgent> = (agent, onAgentConfigChanged) => {
     const [selectedLLMModelID, setSelectedLLMModelID] = React.useState(agent.llm?.type);
     const [llm, setLLM] = React.useState(agent.llm);
     const availableLLMModels = getAvailableLLMs();
     const LLMSettingPanel = (props: {model: ILLMModel, onChange: (model: ILLMModel) => void}) => {
-        if(selectedLLMModelID != undefined && hasConfigPanelProvider(selectedLLMModelID)){
-            return getConfigPanelProvider(selectedLLMModelID)(props.model, (model: IModel) => props.onChange(model as ILLMModel));
+        if(selectedLLMModelID != undefined && hasLLMProvider(selectedLLMModelID)){
+            return getLLMConfigUIProvider(selectedLLMModelID)(props.model, (model: IModel) => props.onChange(model as ILLMModel));
         }
         return <></>;
     }

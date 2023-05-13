@@ -30,7 +30,6 @@ import { AgentExecutor } from 'langchain/agents';
 import { getAgentExecutorProvider } from '@/utils/app/agentProvider';
 import { IRecord } from '@/types/storage';
 import { CentralBox, EditableSavableTextField, EditableSelectField, SelectableListItem, SmallLabel, SmallMultipleSelectField, SmallSelectField, SmallTextField } from '../Global/EditableSavableTextField';
-import { getAvailableAgents } from '@/utils/app/agentConfigPannelProvider';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';

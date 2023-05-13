@@ -10,12 +10,11 @@ import {
   } from 'react';
 
 import { Box, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, Tab, Tabs, DialogTitle, Dialog, DialogActions, DialogContent, DialogContentText, ListItemAvatar, IconButton, Menu, MenuItem } from '@mui/material';
-import { configPanelProviderType, getAgentConfigPannelProvider, getAvailableAgents, hasAgentConfigPannelProvider } from '@/utils/app/agentConfigPannelProvider';
 import { IAgent } from '@/types/agent';
 import { CentralBox, EditableSavableTextField, EditableSelectField, SelectableListItem, SettingSection, SmallSelectField, SmallSelectSetting, SmallTextField, SmallTextSetting } from '../Global/EditableSavableTextField';
 import { TabContext, TabPanel } from '@mui/lab';
 import { ReactElement } from 'react-markdown/lib/react-markdown';
-import { hasAgentExecutorProvider } from '@/utils/app/agentProvider';
+import { getAgentConfigUIProvider, getAgentDefaultConfig, getAvailableAgents, hasAgentConfigUIProvider, hasAgentExecutorProvider } from '@/utils/app/agentProvider';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
 import { AgentAction } from '@/utils/app/agentReducer';
@@ -69,7 +68,7 @@ const CreateAgentDialog = (props: {open: boolean, onClose: () => void, storageDi
                 <Button onClick={props.onClose}>Cancel</Button>
                 <Button
                     disabled={!isSavable}
-                    onClick={() => onAgentCreatedHandler({type: agentID!, alias: alias, description: '', avatar: alias})}>Create</Button>
+                    onClick={() => onAgentCreatedHandler({...getAgentDefaultConfig(agentID!), alias: alias})}>Create</Button>
             </DialogActions>
         </Dialog>
     );
@@ -90,11 +89,11 @@ export const AgentPage: FC<{availableAgents: IAgent[], storageDispatcher: Dispat
       };
 
     const AgentAdvancedSettingPanel = (props: { agent: IAgent, onchange: (agent: IAgent) => void}) => {
-        if(!hasAgentConfigPannelProvider(props.agent.type)){
+        if(!hasAgentConfigUIProvider(props.agent.type)){
             return <Typography>Not implemented</Typography>
         }
 
-        return getAgentConfigPannelProvider(props.agent.type)(props.agent, props.onchange);
+        return getAgentConfigUIProvider(props.agent.type)(props.agent, props.onchange);
     }
 
     const onCloseSettingMenu = () => {

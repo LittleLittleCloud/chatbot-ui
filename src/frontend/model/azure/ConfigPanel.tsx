@@ -4,7 +4,7 @@ import { TextField, Stack } from "@mui/material";
 import { EditableSavableTextField, SettingSection, SmallNumberSetting, SmallTextSetting } from "@/components/Global/EditableSavableTextField";
 import { providerType } from "@/utils/app/configPanelProvider";
 
-const AzureGPT35TurboConfig: providerType<IGPT35Turbo> = (model, onModelConfigChanged) => {
+const GPTConfig: providerType<IGPT35Turbo | ITextDavinci003> = (model, onModelConfigChanged) => {
     return (
         <>
             <SmallTextSetting name="api key" value={model.apiKey} onChange={(value) => onModelConfigChanged({ ...model, apiKey: value})}/>
@@ -32,4 +32,4 @@ const AzureTextDavinci003Config: providerType<ITextDavinci003> = (model, onModel
         </>);
 };
 
-export {AzureTextDavinci003Config, AzureGPT35TurboConfig}
+export {AzureTextDavinci003Config, GPTConfig}
