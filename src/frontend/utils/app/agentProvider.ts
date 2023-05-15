@@ -14,7 +14,7 @@ export function registerAgentProvider<T extends IAgent>(
     agentProvider: agentProviderType<T>,
     agentConfigUIProvider: agentConfigUIProvderType<T>,
     defaultConfig: T){
-    agentProviderRecord[id] = (agent) => agentProvider(agent as T);
+    agentProviderRecord[id] = (agent, history) => agentProvider(agent as T, history);
     agentConfigUIProviderRecord[id] = (agent, onConfigChange) => agentConfigUIProvider(agent as T, onConfigChange);
     defaultAgentConfig[id] = defaultConfig;
 

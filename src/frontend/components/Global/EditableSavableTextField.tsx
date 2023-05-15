@@ -12,6 +12,7 @@ import { Box, Select, InputLabel, Container, List, ListItem, Stack, Typography, 
 import styled from '@emotion/styled';
 import CheckIcon from '@mui/icons-material/Check';
 import ClearIcon from '@mui/icons-material/Clear';
+import { ReactMarkdown } from 'react-markdown/lib/react-markdown';
 
 export const EditableSavableTextField = (props: {name: string, value?: string, onChange: (valueS: string) => void}) => {
     const [value, setValue] = useState(props.value);

@@ -55,9 +55,6 @@ export const ChatMessage: FC<Props> = memo(
 
     return (
         <Box
-          sx={{
-            overflowWrap: 'anywhere',
-          }}
         >
           <Stack
             direction={ isUser ? "row-reverse" : "row"}
@@ -68,7 +65,7 @@ export const ChatMessage: FC<Props> = memo(
             <Box
               sx={{
                 display: 'flex',
-                maxWidth: '40%',
+                maxWidth: '80%',
                 backgroundColor: 'grey.900',
                 borderRadius: 2,
               }}>
@@ -76,6 +73,7 @@ export const ChatMessage: FC<Props> = memo(
                 direction="column"
                 spacing={1}
                 sx={{
+                  maxWidth: '100%',
                   padding: 2,
                   pt: 1,
                 }}>
@@ -93,7 +91,7 @@ export const ChatMessage: FC<Props> = memo(
                 <TinyLabel color='text.secondary'>{new Date(message.timestamp).toLocaleString()}</TinyLabel>
               }
               </Stack>
-                <MessageElement message={message} onchange={(message: IMessage) => {}} />
+              <MessageElement message={message} onchange={(message: IMessage) => {}} />
               </Stack>
             </Box>
           </Stack>

@@ -77,6 +77,12 @@ abstract class GPTBase extends LLM{
         // https://YOUR_RESOURCE_NAME.openai.azure.com/openai/deployments/YOUR_DEPLOYMENT_NAME/completions?api-version=2022-12-01
         var endPoint = `https://${this.resourceName}.openai.azure.com/openai/deployments/${this.deploymentID}/completions?api-version=${this.apiVersion}`;
         stop = stop ?? this.isChatModel ? [...this.stop ?? [], "<|im_end|>"] : this.stop;
+        if(this.isChatModel){
+            prompt = `<|im_start|>system
+            ${prompt}
+            <|im_end|>
+            <|im_start|>assistant`;
+        }
         var response = await fetch(endPoint,{
             method: "POST",
             headers:[

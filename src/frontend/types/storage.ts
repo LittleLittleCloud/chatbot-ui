@@ -13,3 +13,19 @@ export interface IStorage extends IRecord{
   agents: IAgent[];
   groups: IGroup[];
 }
+
+export function saveStorage(storage: IStorage){
+  localStorage.setItem('storage', JSON.stringify(storage));
+}
+
+export function loadStorage(): IStorage{
+  var storage = localStorage.getItem('storage');
+  if(storage){
+    return JSON.parse(storage);
+  }
+  return {
+    type: "storage",
+    agents: [],
+    groups: []
+  };
+}

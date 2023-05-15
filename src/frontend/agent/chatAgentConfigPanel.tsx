@@ -1,11 +1,13 @@
 import { getAvailableLLMs, getLLMConfigUIProvider, getLLMModelDefaultValue, hasLLMProvider } from "@/utils/app/llmProvider";
 import { IChatAgent, IZeroshotAgentMessage } from './chatAgent';
 import { EditableSavableTextField, EditableSelectField, SettingSection, SmallLabel, SmallMultipleSelectSetting, SmallSelectSetting, SmallTextSetting, TinyLabel } from '@/components/Global/EditableSavableTextField';
-import { Chip, Divider, Stack } from '@mui/material';
+import { Box, Chip, Divider, Stack } from '@mui/material';
 import { providerType } from '@/utils/app/configPanelProvider';
 import React from 'react';
 import { ILLMModel, IModel } from '@/types/model';
 import { agentConfigUIProvderType } from "@/utils/app/agentProvider";
+import { ReactMarkdown } from "react-markdown/lib/react-markdown";
+import { Markdown } from "@/components/Global/Markdown";
 
 export const ChatAgentConfigPanel: agentConfigUIProvderType<IChatAgent> = (agent, onAgentConfigChanged) => {
     const [selectedLLMModelID, setSelectedLLMModelID] = React.useState(agent.llm?.type);
@@ -55,12 +57,11 @@ export const ZeroshotMessage: providerType<IZeroshotAgentMessage> = (message, on
     const content = error ?? message.content;
     const [openContent, setOpenContent] = React.useState<'content' | 'prompt' | 'error'>(error ? "error" : "content");
     return (
-        <>
         <Stack
             direction="column"
             spacing={1}>
             {openContent === 'content' &&
-                <SmallLabel>{content.toString()}</SmallLabel>
+                <Markdown>{content.toString()}</Markdown>
             }
             {
                 openContent === 'error' &&
@@ -97,6 +98,5 @@ export const ZeroshotMessage: providerType<IZeroshotAgentMessage> = (message, on
                     }}>prompt</TinyLabel>
             </Stack>
         </Stack>
-        </>
     )
 }

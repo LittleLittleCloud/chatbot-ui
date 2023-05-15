@@ -1,6 +1,8 @@
 const { i18n } = require('./next-i18next.config');
 const { version } = require('./package.json');
 /** @type {import('next').NextConfig} */
+
+const removeImports = require('next-remove-imports')();
 const nextConfig = {
   // i18n,
   output: 'export',
@@ -30,4 +32,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = {...nextConfig};

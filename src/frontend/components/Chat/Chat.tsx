@@ -122,6 +122,10 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
     handleClose();
     setOpenUpdateGroupDialog(false);
     storageDispatcher({type: 'updateGroup', payload: group, original: groupToEdit!});
+
+    if(selectedGroup?.name == group.name){
+      handleGroupSelected(group);
+    }
   }
 
   const onCancelDeleteGroup = () => {
@@ -268,7 +272,6 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
       // set agents
       // if none of agents is available, alert user to add an agent first
       var _agents = group.agents.map(agent => agents.find(a => a.alias === agent));
-      console.log(_agents);
       var agentExecutorProviders = _agents.map(_agent => getAgentExecutorProvider(_agent!.type));
       var agentExecutors = agentExecutorProviders.map((_agent, i) => _agent(_agents[i]!, group.conversation));
       setAgentExecutors(agentExecutors);

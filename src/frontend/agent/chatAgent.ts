@@ -71,12 +71,6 @@ class CustomPromptTemplate extends BaseStringPromptTemplate {
       const newInput = { agent_scratchpad: agentScratchpad, ...input };
       /** Format the template. */
       var prompt = renderTemplate(template, "f-string", newInput);
-      if(this.useChatML){
-        prompt = `<|im_start|>system
-        ${prompt}
-        <|im_end|>
-        <|im_start|>assistant`;
-      }
       return Promise.resolve(prompt);
     }
   
@@ -122,6 +116,8 @@ export function initializeChatAgentExecutor(agent: IChatAgent, history?: IMessag
     if (!agent.llm) {
         throw new Error("No llm provided");
     }
+
+    console.log(history);
     var llmProvider = getLLMProvider(agent.llm!);
     var llm = llmProvider(agent.llm!);
     var chatChain = new ConversationChain({
@@ -129,7 +125,6 @@ export function initializeChatAgentExecutor(agent: IChatAgent, history?: IMessag
         memory: new ChatMemory({
             history: history,
             outputKey: agent.alias,
-            useChatML: agent.llm?.isChatModel ?? false,
         }),
         prompt: new CustomPromptTemplate({...agent, inputVariables: ["history", "from", "content"]}),
     });
@@ -138,8 +133,7 @@ export function initializeChatAgentExecutor(agent: IChatAgent, history?: IMessag
         outputParser: new CustomOutputParser(),
     });
     const handler = new ConsoleCallbackHandler();
-    const tracer = new LangChainTracer();
-    var executor = AgentExecutor.fromAgentAndTools({agent: singleActionAgent, tools: [], verbose: true, callbacks: [handler, tracer]});
+    var executor = AgentExecutor.fromAgentAndTools({agent: singleActionAgent, tools: [], verbose: true, callbacks: [handler]});
     var agentExecutor = new ChatAgentExecutor(executor, agent);
     return agentExecutor;
 }

@@ -1,6 +1,5 @@
 import { IModelConfig } from "@/components/Model/model";
 import { ILLMModel, IModel } from "@/types/model";
-import { Container } from "inversify";
 import { LLM } from "langchain/llms/base";
 
 export type llmProviderType<T extends ILLMModel> = (model: T) => LLM;
