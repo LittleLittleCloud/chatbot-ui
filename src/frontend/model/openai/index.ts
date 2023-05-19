@@ -31,6 +31,5 @@ registerLLMProvider<IGPT35Turbo>(
         presencePenalty: 0,
         isChatModel: true,
         isStreaming: true,
-        stop: ["\n"],
         model: "gpt-3.5-turbo",
     } as IGPT35Turbo);

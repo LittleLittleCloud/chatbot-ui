@@ -81,12 +81,12 @@ const CreateOrEditGroupDialog: FC<{open: boolean, group?: IGroup, agents: IAgent
     </Dialog>);
 };
 
-const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (group: IGroup) => void, storageDispatcher: Dispatch<StorageAction>}> = ({groups, agents, onGroupSelected, storageDispatcher}) => {
+const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (group?: IGroup) => void, storageDispatcher: Dispatch<StorageAction>}> = ({groups, agents, onGroupSelected, storageDispatcher}) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [groupToDelete, setGroupToDelete] = useState<IGroup | null>(null);
   const [groupToEdit, setGroupToEdit] = useState<IGroup>();
   const [openUpdateGroupDialog, setOpenUpdateGroupDialog] = useState<boolean>(false);
-  const [selectedGroup, setSelectedGroup] = useState<IGroup | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<IGroup | undefined>(undefined);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -96,7 +96,7 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
     setAnchorEl(null);
   };
 
-  const handleGroupSelected = (group: IGroup) => {
+  const handleGroupSelected = (group?: IGroup) => {
     setSelectedGroup(group);
     onGroupSelected(group);
   }
@@ -115,6 +115,9 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
 
   const onConfirmDeleteGroup = () => {
     storageDispatcher({type: 'removeGroup', payload: groupToDelete!});
+    if(selectedGroup?.name == groupToDelete?.name){
+      handleGroupSelected(undefined);
+    }
     setGroupToDelete(null);
   }
 
@@ -264,7 +267,14 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
       setOpenCreateGroupDialog(false);
     }
 
-    const onHandleSelectGroup = (group: IGroup) => {
+    const onHandleSelectGroup = (group?: IGroup) => {
+      if(group == undefined){
+        setCurrentGroup(undefined);
+        setCurrentConversation(undefined);
+        setAgentExecutors([]);
+
+        return;
+      }
       group.agents = group.agents.filter(agent => agents.find(a => a.alias === agent));
       setCurrentGroup(group);
       setCurrentConversation(group.conversation);
