@@ -102,6 +102,9 @@ export const AgentPage: FC<{availableAgents: IAgent[], storageDispatcher: Dispat
     }
     const onAgentDeletedHandler = (agent: IAgent) => {
         storageDispatcher({type: 'removeAgent', payload: agent});
+        if(selectedAgent?.alias == agent.alias){
+            setSelectedAgent(undefined);
+        }
         setAgentToDelete(null);
         onCloseSettingMenu();
     };

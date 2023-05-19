@@ -11,7 +11,8 @@ module.exports = {
     globals: {
       'ts-jest': {
         tsConfig: '<rootDir>/tsconfig.test.json'
-      }
+      },
+      'window': {},
     },
     testPathIgnorePatterns: ["/node_modules/"],
     testEnvironment: "node",
@@ -21,5 +22,8 @@ module.exports = {
     },
     transform: {
       "^.+\\.tsx?$": ["ts-jest", "<rootDir>/tsconfig.test.json"]
-    }
+    },
+    setupFiles: [
+      "fake-indexeddb/auto"
+    ]
   };
