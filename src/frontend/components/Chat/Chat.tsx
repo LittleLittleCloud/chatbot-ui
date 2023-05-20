@@ -29,7 +29,7 @@ import { IAgent, IAgentExcutor } from '@/types/agent';
 import { AgentExecutor } from 'langchain/agents';
 import { getAgentExecutorProvider } from '@/utils/app/agentProvider';
 import { IRecord } from '@/types/storage';
-import { CentralBox, EditableSavableTextField, EditableSelectField, SelectableListItem, SmallLabel, SmallMultipleSelectField, SmallSelectField, SmallTextField } from '../Global/EditableSavableTextField';
+import { CentralBox, EditableSavableTextField, EditableSelectField, SelectableListItem, SmallAvatar, SmallLabel, SmallMultipleSelectField, SmallSelectField, SmallTextField, TinyAvatar } from '../Global/EditableSavableTextField';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
@@ -184,7 +184,7 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
                 max={0}
                 total = {group.agents.length}>
                 {group.agents.map((agentId, index) => (
-                  <Avatar key={index} alt={agentId}>{agentId[0]}</Avatar>
+                  <TinyAvatar key={index} avatarKey={agents[index].avatar} />
                 ))}
               </AvatarGroup>
             </Box>
@@ -386,6 +386,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
                 <ChatMessage
                   key={index}
                   message={message}
+                  agent={agents.find(agent => agent.alias === message.from)}
                   />
                 </Box>
             ))}

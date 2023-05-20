@@ -8,11 +8,13 @@ import {
     useState,
   } from 'react';
 
-import { Box, Select, InputLabel, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, MenuItem, FormControl, TextFieldProps, BaseTextFieldProps, SelectProps, Tooltip, IconButton, Slider, ListItemBaseProps, ListItemProps } from '@mui/material';
+import { Box, Select, InputLabel, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, MenuItem, FormControl, TextFieldProps, BaseTextFieldProps, SelectProps, Tooltip, IconButton, Slider, ListItemBaseProps, ListItemProps, AvatarProps } from '@mui/material';
 import styled from '@emotion/styled';
 import CheckIcon from '@mui/icons-material/Check';
 import ClearIcon from '@mui/icons-material/Clear';
 import { ReactMarkdown } from 'react-markdown/lib/react-markdown';
+import { ImageBlobStorage } from '@/utils/blobStorage';
+import { IAgent } from '@/types/agent';
 
 export const EditableSavableTextField = (props: {name: string, value?: string, onChange: (valueS: string) => void}) => {
     const [value, setValue] = useState(props.value);
@@ -146,7 +148,7 @@ export const SmallMultipleSelectField = (props: {name?: string, value?: string[]
     )
 }
 
-export const SettingSection = (props: {title: string, toolTip?: string, children: React.ReactNode}) => {
+export const SettingSection = (props: {title?: string, toolTip?: string, children: React.ReactNode}) => {
     return (
         <Stack
             direction="column"
@@ -507,6 +509,114 @@ export const SmallMultipleSelectSetting = (props: {name: string, toolTip?: strin
         </Stack>
     )
 };
+
+export const AvatarEditControl = (props: {name: string, toolTip?: string, value?: string, onChange: (value: string) => void}) => {
+    const [value, setValue] = useState(props.value);
+    const [isEditing, setIsEditing] = useState(false);
+
+    useEffect(() => {
+        setValue(props.value);
+        setIsEditing(false);
+    }, [props.value]);
+
+    const onValueChange = (value?: string) =>{
+        if(value != props.value){
+            setValue(value);
+            setIsEditing(true);
+        }
+        else{
+            setIsEditing(false);
+            setValue(value);
+        }
+    }
+
+    return (
+        <Stack direction="column" spacing={1}>
+        <Stack direction="row" spacing={1}>
+            <Box
+                sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    width: '20%',
+                }}>
+            <Tooltip
+                title={props.toolTip ?? ""}
+                placement="top"
+                arrow>
+                <SmallLabel>{props.name}</SmallLabel>
+            </Tooltip>
+            </Box>
+            <CentralBox
+                sx={{
+                    width: '80%',
+                }}>
+            <Avatar src={value}/>
+            </CentralBox>
+        </Stack>
+        {isEditing &&
+        <Box
+            sx={{
+                display: "flex",
+                justifyContent: "flex-end",
+                width: '100%',
+            }}>
+            <SaveCancelButtonGroup
+                onConfirm={() => {
+                    if (isEditing) {
+                        props.onChange(value!);
+                    }
+                    setIsEditing(!isEditing);
+                }}
+                onCancel={() => {
+                    setIsEditing(false);
+                    setValue(props.value);
+                }}/>
+        </Box>}
+        </Stack>
+    )
+};
+
+function useEffectAsync(effect: () => Promise<void>, inputs?: any[]): void
+{
+    useEffect(() => {
+        effect();
+    }, inputs);
+}
+
+export const SmallAvatar = (props: AvatarProps & {avatarKey: string}) => {
+    const [src, setSrc] = useState(props.src);
+    useEffectAsync(async () => {
+            if(props.avatarKey){
+            var imageStorage = await ImageBlobStorage;
+            console.log(props.avatarKey);
+            var blob = await imageStorage.getBlob(props.avatarKey);
+            if(blob){
+                URL.revokeObjectURL(src!);
+                setSrc(URL.createObjectURL(blob));
+            }
+        }
+    }, [props.avatarKey]);
+
+    return (
+        <Avatar
+            {...props}
+            sx={{
+                width: '3rem',
+                height: '3rem',
+            }}
+            src={src}/>
+    )
+}
+
+export const LargeAvatar = styled(SmallAvatar)<AvatarProps & {avatarKey: string}>(({theme}) => ({
+    width: '6rem',
+    height: '6rem',
+}));
+
+export const TinyAvatar = styled(SmallAvatar)<AvatarProps & {avatarKey: string}>(({theme}) => ({
+    width: '2rem',
+    height: '2rem',
+}));
 
 export const Label = styled(Typography)(({theme}) => ({
     ...theme.typography.button,

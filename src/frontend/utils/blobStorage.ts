@@ -11,7 +11,7 @@ export interface IBlobStorage
 
 var indexDB : IDBFactory = fakeIndexedDB;
 
-if(window){
+if(typeof window !== "undefined"){
     indexDB = window?.indexedDB ||
     (window as any)?.mozIndexedDB ||
     (window as any)?.webkitIndexedDB ||

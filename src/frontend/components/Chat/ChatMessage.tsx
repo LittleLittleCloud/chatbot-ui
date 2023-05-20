@@ -9,17 +9,17 @@ import { CodeBlock } from '../Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '../Markdown/MemoizedReactMarkdown';
 import { CopyButton } from './CopyButton';
 import { Avatar, Box, Stack, Typography } from '@mui/material';
-import { SmallLabel, TinyLabel } from '../Global/EditableSavableTextField';
+import { SmallAvatar, SmallLabel, TinyLabel } from '../Global/EditableSavableTextField';
 import { getMessageUIProvider, hasMessageUIProvider } from '@/utils/app/configPanelProvider';
+import { IAgent } from '@/types/agent';
 
 interface Props {
   message: IMessage;
+  agent?: IAgent;
 }
 
-
-
 export const ChatMessage: FC<Props> = memo(
-  ({ message}) => {
+  ({ message, agent}) => {
     const { t } = useTranslation('chat');
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [messageContent, setMessageContent] = useState(message.content);
@@ -59,9 +59,13 @@ export const ChatMessage: FC<Props> = memo(
           <Stack
             direction={ isUser ? "row-reverse" : "row"}
             spacing={2}>
-            <Avatar>
-              {isUser ? 'You' : message.from.substring(0, 2)}
-            </Avatar>
+            {isUser ? 
+              <Avatar
+                sx={{
+                  width: '3rem',
+                  height: '3rem',
+                }}>You</Avatar> :
+              <SmallAvatar avatarKey={agent?.avatar!}/>}
             <Box
               sx={{
                 display: 'flex',
