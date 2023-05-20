@@ -34,6 +34,7 @@ const CreateAgentDialog = (props: {open: boolean, onClose: () => void, storageDi
     const onAgentCreatedHandler = (agent: IAgent) => {
         try{
             props.storageDispatcher({type: 'addAgent', payload: agent});
+            props.onClose();
         }
         catch(err){
             alert(err);
@@ -293,7 +294,6 @@ export const AgentPage: FC<{availableAgents: IAgent[], storageDispatcher: Dispat
                         onChange={(e, v) =>setTab(v)}>
                         <Tab label="Basic info" value="1" />
                         <Tab label={`setting: ${selectedAgent.type}`} value="2" />
-                        <Tab label="Try it out" value="3" />
                     </Tabs>
                     <TabPanel value="1">
                         <Stack

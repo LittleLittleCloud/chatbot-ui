@@ -586,14 +586,18 @@ function useEffectAsync(effect: () => Promise<void>, inputs?: any[]): void
 export const SmallAvatar = (props: AvatarProps & {avatarKey: string}) => {
     const [src, setSrc] = useState(props.src);
     useEffectAsync(async () => {
-            if(props.avatarKey){
+        if(props.src){
+            URL.revokeObjectURL(src!);
+        }
+        if(props.avatarKey){
             var imageStorage = await ImageBlobStorage;
-            console.log(props.avatarKey);
             var blob = await imageStorage.getBlob(props.avatarKey);
             if(blob){
-                URL.revokeObjectURL(src!);
                 setSrc(URL.createObjectURL(blob));
             }
+        }
+        else{
+            setSrc(props.src);
         }
     }, [props.avatarKey]);
 
