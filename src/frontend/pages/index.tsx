@@ -36,7 +36,7 @@ import { BaseLLM, LLM } from "langchain/dist/llms/base";
 import { GPT_35_TURBO, TextDavinci003 } from '@/model/azure/GPT';
 import '@/utils/app/setup';
 import { AgentPage } from '@/components/Agent/agent';
-import { IStorage } from '@/types/storage';
+import { IStorage, importZip } from '@/types/storage';
 import SettingsIcon from '@mui/icons-material/Settings';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -101,21 +101,24 @@ const Home: React.FC<IStorage> = () => {
   };
 
   const handleExportSettings = () => {
-    exportData(storage)
-    setIsMenuOpen(false);
+    exportData(storage).finally(() => {
+      setIsMenuOpen(false);
+    });
   };
 
   const handleImportSettings = ({ target }: {target: HTMLInputElement}) => {
     if (!target.files?.length) return;
     const file = target.files[0];
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const data: IStorage = JSON.parse(event.target?.result as string);
+    reader.onload = async (event) => {
+
+      const data: IStorage = await importZip(new Blob([event.target?.result!]));
+      console.log(data);
       storageDispatcher({ type: 'set', payload: data });
       setIsMenuOpen(false);
     };
 
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
 
   useEffect(() => {
