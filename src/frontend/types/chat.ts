@@ -11,7 +11,7 @@ export interface IMessage extends IRecord{
   timestamp?: number,
   from: string | '__user',
   type: string,
-  content: string | Blob,
+  content: string,
   prompt?: string,
 }
 

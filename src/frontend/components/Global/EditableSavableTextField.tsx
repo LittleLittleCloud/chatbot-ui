@@ -8,7 +8,7 @@ import {
     useState,
   } from 'react';
 
-import { Box, Select, InputLabel, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, MenuItem, FormControl, TextFieldProps, BaseTextFieldProps, SelectProps, Tooltip, IconButton, Slider, ListItemBaseProps, ListItemProps, AvatarProps } from '@mui/material';
+import { Box, Select, InputLabel, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, MenuItem, FormControl, TextFieldProps, BaseTextFieldProps, SelectProps, Tooltip, IconButton, Slider, ListItemBaseProps, ListItemProps, AvatarProps, Switch } from '@mui/material';
 import styled from '@emotion/styled';
 import CheckIcon from '@mui/icons-material/Check';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -332,7 +332,7 @@ export const SelectableListItem = (props: ListItemProps & {selected: boolean}) =
     )
 }
 
-export const SmallTextSetting = (props: {name: string, toolTip?: string, value?: string, onChange: (value: string) => void}) => {
+export const SmallTextSetting = (props: {name: string, toolTip?: string, value?: string, onChange?: (value: string) => void}) => {
     const [value, setValue] = useState(props.value);
     const [isEditing, setIsEditing] = useState(false);
     useEffect(() => {
@@ -377,6 +377,7 @@ export const SmallTextSetting = (props: {name: string, toolTip?: string, value?:
             </Box>
             <SmallTextField
                 value={value}
+                disabled={props.onChange == undefined}
                 onChange={(e) => onValueChange(e.target.value)}
                 multiline
                 sx={{
@@ -510,73 +511,46 @@ export const SmallMultipleSelectSetting = (props: {name: string, toolTip?: strin
     )
 };
 
-export const AvatarEditControl = (props: {name: string, toolTip?: string, value?: string, onChange: (value: string) => void}) => {
+export const SmallToggleSetting = (props: {name: string, toolTip?: string, value?: boolean, onChange: (value: boolean) => void}) => {
     const [value, setValue] = useState(props.value);
-    const [isEditing, setIsEditing] = useState(false);
 
     useEffect(() => {
         setValue(props.value);
-        setIsEditing(false);
     }, [props.value]);
 
-    const onValueChange = (value?: string) =>{
-        if(value != props.value){
-            setValue(value);
-            setIsEditing(true);
-        }
-        else{
-            setIsEditing(false);
-            setValue(value);
-        }
-    }
-
     return (
-        <Stack direction="column" spacing={1}>
-        <Stack direction="row" spacing={1}>
+        <Stack
+            direction="row"
+            spacing={1}>
             <Box
                 sx={{
                     display: "flex",
                     alignItems: "center",
                     width: '20%',
                 }}>
-            <Tooltip
-                title={props.toolTip ?? ""}
-                placement="top"
-                arrow>
                 <SmallLabel>{props.name}</SmallLabel>
-            </Tooltip>
             </Box>
-            <CentralBox
+            <Box
                 sx={{
+                    alignItems: "center",
+                    display: "flex",
                     width: '80%',
                 }}>
-            <Avatar src={value}/>
-            </CentralBox>
-        </Stack>
-        {isEditing &&
-        <Box
-            sx={{
-                display: "flex",
-                justifyContent: "flex-end",
-                width: '100%',
-            }}>
-            <SaveCancelButtonGroup
-                onConfirm={() => {
-                    if (isEditing) {
-                        props.onChange(value!);
-                    }
-                    setIsEditing(!isEditing);
-                }}
-                onCancel={() => {
-                    setIsEditing(false);
-                    setValue(props.value);
-                }}/>
-        </Box>}
+                <SmallLabel
+                    sx={{
+                        flexGrow: 1,
+                    }}
+                    color='text.secondary' >{props.toolTip}</SmallLabel>
+            <Switch
+                checked={value}
+                onChange={(e) => props.onChange(e.target.checked)}/>
+            </Box>
         </Stack>
     )
 };
 
-function useEffectAsync(effect: () => Promise<void>, inputs?: any[]): void
+
+export function useEffectAsync(effect: () => Promise<void>, inputs?: any[]): void
 {
     useEffect(() => {
         effect();
@@ -630,7 +604,7 @@ export const Label = styled(Typography)(({theme}) => ({
 }));
 
 export const SmallLabel = styled(Label)(({theme}) => ({
-    fontSize: '1.1rem',
+    fontSize: '1rem',
     lineHeight: '1.5rem',
 }));
 

@@ -26,6 +26,9 @@ interface IChatAgent extends IAgent {
     // todo: tools
     suffixPrompt?: string;
     prefixPrompt?: string;
+    useMarkdown?: boolean;
+    includeHistory?: boolean;
+    includeName?: boolean;
 };
 
 class CustomOutputParser extends AgentActionOutputParser {
@@ -38,17 +41,24 @@ class CustomOutputParser extends AgentActionOutputParser {
     }
 }
 
-class CustomPromptTemplate extends BaseStringPromptTemplate {
+export class ChatAgentPromptTemplate extends BaseStringPromptTemplate {
     prefix: string;
     suffix: string;
     useChatML: boolean;
+    useMarkdown: boolean;
+    includeHistory: boolean;
+    includeName: boolean;
     name: string;
   
-    constructor(args: IChatAgent & {inputVariables: string[]}) {
-        super({ inputVariables: args.inputVariables });
+    constructor(args: IChatAgent & {inputVariables?: string[]}) {
+        var _inputVariables = ['history', 'from', 'content', ...args.inputVariables ?? []]
+        super({ inputVariables: _inputVariables });
         this.prefix = args.prefixPrompt!;
         this.suffix = args.suffixPrompt!;
         this.name = args.alias;
+        this.useMarkdown = args.useMarkdown ?? false;
+        this.includeHistory = args.includeHistory ?? false;
+        this.includeName = args.includeName ?? false;
         this.useChatML = args.llm?.isChatModel ?? false;
     }
   
@@ -58,8 +68,20 @@ class CustomPromptTemplate extends BaseStringPromptTemplate {
   
     format(input: InputValues): Promise<string> {
       /** Construct the final template */
-      var namePrompt = `You name is ${this.name}`;
-      const template = [namePrompt, this.prefix, this.suffix].join("\n\n");
+      var namePrompt = `Your name is ${this.name}`;
+      var historyPrompt = `###chat history###
+{history}
+###`;
+      var newMessagePrompt = `###new message###
+{from}: {content}`;
+      var useMarkdownPrompt = `use markdown to format response`;
+      const templates = [this.prefix];
+      if(this.includeName) templates.push(namePrompt);
+      if(this.useMarkdown) templates.push(useMarkdownPrompt);
+      if(this.includeHistory) templates.push(historyPrompt);
+      templates.push(newMessagePrompt);
+      templates.push(this.suffix);
+      var template = templates.join("\n");
       /** Construct the agent_scratchpad */
       const intermediateSteps = input.intermediate_steps as AgentStep[];
       const agentScratchpad = intermediateSteps.reduce(
@@ -126,7 +148,7 @@ export function initializeChatAgentExecutor(agent: IChatAgent, history?: IMessag
             history: history,
             outputKey: agent.alias,
         }),
-        prompt: new CustomPromptTemplate({...agent, inputVariables: ["history", "from", "content"]}),
+        prompt: new ChatAgentPromptTemplate({...agent}),
     });
     var singleActionAgent = new LLMSingleActionAgent({
         llmChain: chatChain,
