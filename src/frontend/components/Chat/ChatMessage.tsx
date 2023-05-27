@@ -1,5 +1,5 @@
 import { IMessage, IsUserMessage, Message } from '@/types/chat';
-import { IconEdit } from '@tabler/icons-react';
+import { IconEdit, IconRefresh } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { FC, memo, useEffect, useRef, useState } from 'react';
 import rehypeMathjax from 'rehype-mathjax';
@@ -8,18 +8,23 @@ import remarkMath from 'remark-math';
 import { CodeBlock } from '../Markdown/CodeBlock';
 import { MemoizedReactMarkdown } from '../Markdown/MemoizedReactMarkdown';
 import { CopyButton } from './CopyButton';
-import { Avatar, Box, Stack, Typography } from '@mui/material';
+import { Avatar, Box, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { SmallAvatar, SmallLabel, TinyLabel } from '../Global/EditableSavableTextField';
 import { getMessageUIProvider, hasMessageUIProvider } from '@/utils/app/configPanelProvider';
 import { IAgent } from '@/types/agent';
+import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
 interface Props {
   message: IMessage;
   agent?: IAgent;
+  onDeleteMessage?: (message: IMessage) => void;
+  onResendMessage?: (message: IMessage) => void;
 }
 
 export const ChatMessage: FC<Props> = memo(
-  ({ message, agent}) => {
+  ({ message, agent, onDeleteMessage, onResendMessage}) => {
     const { t } = useTranslation('chat');
     const [isEditing, setIsEditing] = useState<boolean>(false);
     const [messageContent, setMessageContent] = useState(message.content);
@@ -53,12 +58,30 @@ export const ChatMessage: FC<Props> = memo(
       }
     }, [isEditing]);
 
+    const onDeleteMessageHandler = () => {
+      if (confirm('Are you sure you want to delete this message?')) {
+        onDeleteMessage && onDeleteMessage(message);
+      }
+    };
+
+    const onResendMessageHandler = () => {
+      if (confirm('Are you sure you want to resend this message?')) {
+        onResendMessage && onResendMessage(message);
+      }
+    };
+
     return (
-        <Box
-        >
+        <Box>
           <Stack
             direction={ isUser ? "row-reverse" : "row"}
-            spacing={2}>
+            spacing={2}
+            sx={{
+              ":hover": {
+                '& .toolBar': {
+                  visibility: 'visible',
+                }
+              },
+            }}>
             {isUser ? 
               <Avatar
                 sx={{
@@ -83,7 +106,10 @@ export const ChatMessage: FC<Props> = memo(
                 }}>
               <Stack
                 direction="row"
-                spacing={2}>
+                spacing={2}
+                sx={{
+                  alignItems: 'center',
+                }}>
               {!isUser &&
                 <TinyLabel
                   sx={{
@@ -94,6 +120,41 @@ export const ChatMessage: FC<Props> = memo(
                 message.timestamp &&
                 <TinyLabel color='text.secondary'>{new Date(message.timestamp).toLocaleString()}</TinyLabel>
               }
+              <Stack
+                direction="row"
+                spacing={1}
+                className='toolBar'
+                sx={{
+                  justifyContent: 'flex-end',
+                  flexGrow: 1,
+                  visibility: 'hidden',
+                }}>
+                  {isUser &&
+                  <Tooltip
+                    title='resend this message'>
+                    <IconButton
+                      onClick={onResendMessageHandler}>
+                      <RefreshIcon
+                        sx={{
+                          color: 'text.secondary',
+                          fontSize: '1rem',
+                        }} />
+                    </IconButton>
+                  </Tooltip>
+                  }
+                  <Tooltip
+                    title='delete this message'>
+                    <IconButton
+                      onClick={onDeleteMessageHandler}
+                      size='small'>
+                      <DeleteOutlineIcon
+                        sx={{
+                          color: 'text.secondary',
+                          fontSize: '1rem',
+                        }} />
+                    </IconButton>
+                  </Tooltip>
+              </Stack>
               </Stack>
               <MessageElement message={message} onchange={(message: IMessage) => {}} />
               </Stack>

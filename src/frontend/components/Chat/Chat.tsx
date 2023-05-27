@@ -17,7 +17,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Spinner } from '../Global/Spinner';
+import { Spinner, ThreeDotBouncingLoader } from '../Global/Spinner';
 import { ChatInput } from './ChatInput';
 import { ChatLoader } from './ChatLoader';
 import { ChatMessage } from './ChatMessage';
@@ -37,6 +37,7 @@ import { GroupAction, GroupCmd, groupReducer } from '@/utils/app/groupReducer';
 import { IGroup } from '@/types/group';
 import { groupEnd } from 'console';
 import { StorageAction } from '@/utils/app/storageReducer';
+import { ThreeDots } from 'react-loader-spinner';
 
 const CreateOrEditGroupDialog: FC<{open: boolean, group?: IGroup, agents: IAgent[], onSaved: (group: IGroup) => void, onCancel: () => void}> = ({open, group, agents, onSaved, onCancel}) => {
   const [groupName, setGroupName] = useState(group?.name);
@@ -233,6 +234,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     // const [availableGroups, setAvailableGroups] = useState<IGroup[]>(groups);
     const [openCreateGroupDialog, setOpenCreateGroupDialog] = useState<boolean>(false);
+    const [respondingAgentAlias, setRespondingAgentAlias] = useState<string|undefined>(undefined);
 
     useEffect(() => {
       setCurrentConversation(currentGroup?.conversation);
@@ -245,10 +247,16 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
         if(newMessage.from == '__user'){
           agentExecutors.forEach(async (executor, i) => {
             console.log('executor', executor);
-            var response = await executor.call(newMessage);
+            try{
+              setRespondingAgentAlias(currentGroup?.agents[i]);
+              var response = await executor.call(newMessage);
               if(response){
                 setNewMessage(response);
               }
+            }
+            finally{
+              setRespondingAgentAlias(undefined);
+            }
           })
         }
       }
@@ -286,6 +294,22 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
       var agentExecutors = agentExecutorProviders.map((_agent, i) => _agent(_agents[i]!, group.conversation));
       setAgentExecutors(agentExecutors);
     };
+
+    const onDeleteMessage = (index: number) => {
+      var newConversation = [...currentConversation!];
+      newConversation.splice(index, 1);
+      setCurrentConversation(newConversation);
+      storageDispatcher({type: 'updateGroup', payload: {...currentGroup!, conversation: newConversation}})
+    }
+
+    const onResendMessage = (index: number) => {
+      var resendMessage = currentConversation![index];
+      var newConversation = [...currentConversation!];
+      newConversation.splice(index, 1);
+      setCurrentConversation(newConversation);
+      storageDispatcher({type: 'updateGroup', payload: {...currentGroup!, conversation: newConversation}})
+      setNewMessage(resendMessage);
+    }
 
     return (
       <Box
@@ -364,6 +388,8 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
             flexGrow: 1,
             maxWidth: "80%",
             height: "100%",
+            marginLeft: 5,
+            marginRight: 5,
             flexDirection: "column",
           }}>
           { currentConversation && agentExecutors && agentExecutors.length > 0 &&
@@ -380,13 +406,13 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
                 key={index}
                 sx={{
                   marginTop: 2,
-                  marginRight: 5,
-                  marginLeft: 5,
                 }}>
                 <ChatMessage
                   key={index}
                   message={message}
                   agent={agents.find(agent => agent.alias === message.from)}
+                  onDeleteMessage={(message) => onDeleteMessage(index)}
+                  onResendMessage={(message) => onResendMessage(index)}
                   />
                 </Box>
             ))}
@@ -394,6 +420,22 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
               ref={messagesEndRef} />
             </List>
           }
+          {respondingAgentAlias &&
+          <Stack
+            spacing={1}
+            direction="row">
+            <SmallLabel
+              color='text.secondary'
+              sx = {{
+                fontStyle: "italic",
+              }}>
+              {`${respondingAgentAlias} is typing`}
+            </SmallLabel>
+            <ThreeDotBouncingLoader/>
+          </Stack>
+            
+          }
+          
           {currentGroup && currentGroup.agents.length == 0 && 
           <CentralBox
             sx={{
@@ -407,7 +449,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
           {currentGroup && agentExecutors && agentExecutors.length > 0 &&
           <Box
             sx={{
-              padding: 5,
+              marginBottom: 2,
             }}>
             <ChatInput
               textareaRef={textareaRef}
