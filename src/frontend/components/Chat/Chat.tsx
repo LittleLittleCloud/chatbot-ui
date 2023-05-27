@@ -389,7 +389,6 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
             maxWidth: "80%",
             height: "100%",
             marginLeft: 5,
-            marginRight: 5,
             flexDirection: "column",
           }}>
           { currentConversation && agentExecutors && agentExecutors.length > 0 &&
@@ -406,6 +405,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
                 key={index}
                 sx={{
                   marginTop: 2,
+                  marginRight: 5,
                 }}>
                 <ChatMessage
                   key={index}
@@ -450,6 +450,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
           <Box
             sx={{
               marginBottom: 2,
+              marginRight: 5,
             }}>
             <ChatInput
               textareaRef={textareaRef}
