@@ -154,7 +154,7 @@ export const SettingSection = (props: {title?: string, toolTip?: string, childre
             direction="column"
             spacing={2}
             sx={{
-                backgroundColor: '#1e1e1e',
+                backgroundColor: 'background.secondary',
                 borderRadius: '1.3rem',
                 padding: '1.7rem',
                 pt: '1.2rem',
@@ -317,7 +317,7 @@ export const SelectableListItem = (props: ListItemProps & {selected: boolean}) =
                 margin: '0.5rem',
                 padding: '0rem',
                 borderRadius: '1rem',
-                backgroundColor: props.selected ? '#1e1e1e' : 'background.default',
+                backgroundColor: props.selected ? 'background.secondary' : 'background.default',
             }}>
         <ListItem
             {...props}
@@ -597,10 +597,14 @@ export const TinyAvatar = styled(SmallAvatar)<AvatarProps & {avatarKey: string}>
 }));
 
 export const Label = styled(Typography)(({theme}) => ({
-    ...theme.typography.button,
     textTransform: 'none',
     overflow: 'auto',
     overflowWrap: 'break-word',
+}));
+
+export const LargeLabel = styled(Label)(({theme}) => ({
+    fontSize: '1.5rem',
+    lineHeight: '2rem',
 }));
 
 export const SmallLabel = styled(Label)(({theme}) => ({
@@ -630,4 +634,36 @@ export const CentralBox = styled(Box)(({theme}) => ({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+}));
+
+export const SmallClickableLabel = styled(SmallLabel)(({theme}) => ({
+    cursor: 'pointer',
+    '&:hover': {
+        backgroundColor: theme.palette.action.hover,
+    }
+}));
+
+export const TinyClickableLabel = styled(TinyLabel)(({theme}) => ({
+    cursor: 'pointer',
+    '&:hover': {
+        backgroundColor: theme.palette.action.hover,
+    }
+}));
+
+export const SmallTextButton = styled(Button)(({theme}) => ({
+    ...theme.typography.button,
+    padding: '0.25rem',
+    textTransform: 'none',
+    fontSize: '1rem',
+    lineHeight: '1.5rem',
+}));
+
+export const TinyTextButton = styled(Button)(({theme}) => ({
+    ...theme.typography.button,
+    padding: '0.15rem',
+    paddingLeft: '0.5rem',
+    paddingRight: '0.5rem',
+    textTransform: 'none',
+    fontSize: '0.8rem',
+    lineHeight: '1.2rem',
 }));

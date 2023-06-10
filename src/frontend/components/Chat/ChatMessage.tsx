@@ -92,15 +92,14 @@ export const ChatMessage: FC<Props> = memo(
             <Box
               sx={{
                 display: 'flex',
-                maxWidth: '80%',
-                backgroundColor: 'grey.900',
+                backgroundColor: 'background.secondary',
                 borderRadius: 2,
+                maxWidth: '80%',
               }}>
               <Stack
                 direction="column"
                 spacing={1}
                 sx={{
-                  maxWidth: '100%',
                   padding: 2,
                   pt: 1,
                 }}>

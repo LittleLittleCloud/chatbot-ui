@@ -1,6 +1,6 @@
 import { getAvailableLLMs, getLLMConfigUIProvider, getLLMModelDefaultValue, hasLLMProvider } from "@/utils/app/llmProvider";
 import { ChatAgentPromptTemplate, IChatAgent, IZeroshotAgentMessage } from './chatAgent';
-import { EditableSavableTextField, EditableSelectField, SettingSection, SmallLabel, SmallMultipleSelectSetting, SmallSelectSetting, SmallTextSetting, SmallToggleSetting, TinyLabel, useEffectAsync } from '@/components/Global/EditableSavableTextField';
+import { EditableSavableTextField, EditableSelectField, SettingSection, SmallLabel, SmallMultipleSelectSetting, SmallSelectSetting, SmallTextSetting, SmallToggleSetting, TinyClickableLabel, TinyLabel, useEffectAsync } from '@/components/Global/EditableSavableTextField';
 import { Box, Chip, Divider, Stack } from '@mui/material';
 import { providerType } from '@/utils/app/configPanelProvider';
 import React from 'react';
@@ -121,18 +121,18 @@ export const MarkdownMessage: providerType<IZeroshotAgentMessage> = (message, on
                 }
                 {
                     !error &&
-                    <TinyLabel
+                    <TinyClickableLabel
                     onClick={() => setOpenContent('markdown')}
                     sx = {{
                         color: openContent == 'markdown' ? 'primary.main' : 'text.secondary',
-                    }}>content</TinyLabel>
+                    }}>content</TinyClickableLabel>
                 }
                 <Divider orientation="vertical" flexItem />
-                <TinyLabel
+                <TinyClickableLabel
                     onClick={() => setOpenContent('plain text')}
                     sx = {{
                         color: openContent == 'plain text' ? 'primary.main' : 'text.secondary',
-                    }}>plain text</TinyLabel>
+                    }}>plain text</TinyClickableLabel>
             </Stack>
         </Stack>
     )

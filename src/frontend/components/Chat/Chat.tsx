@@ -29,7 +29,7 @@ import { IAgent, IAgentExcutor } from '@/types/agent';
 import { AgentExecutor } from 'langchain/agents';
 import { getAgentExecutorProvider } from '@/utils/app/agentProvider';
 import { IRecord } from '@/types/storage';
-import { CentralBox, EditableSavableTextField, EditableSelectField, SelectableListItem, SmallAvatar, SmallLabel, SmallMultipleSelectField, SmallSelectField, SmallTextField, TinyAvatar } from '../Global/EditableSavableTextField';
+import { CentralBox, EditableSavableTextField, EditableSelectField, LargeLabel, SelectableListItem, SmallAvatar, SmallLabel, SmallMultipleSelectField, SmallSelectField, SmallTextField, TinyAvatar } from '../Global/EditableSavableTextField';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
@@ -137,7 +137,10 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
   }
 
   return (
-    <>
+    <Box
+      sx={{
+        width: '100%',
+      }}>
     <DeleteConfirmationDialog
       open={groupToDelete != null}
       message="Are you sure to delete this group?"
@@ -190,12 +193,12 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
               </AvatarGroup>
             </Box>
             <Box
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    width: '30%',
-                  }}>
-                <SmallLabel>{group.name}</SmallLabel>
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                flexGrow: 1,
+              }}>
+              <SmallLabel>{group.name}</SmallLabel>
             </Box>
             <CentralBox
                   sx={{
@@ -215,7 +218,7 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
         </SelectableListItem>
       ))}
     </List>
-    </>
+    </Box>
   )
 }
 
@@ -315,7 +318,6 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
       <Box
         sx={{
           display: "flex",
-          flexDirection: "row",
           width: "100%",
           height: "100%",
           backgroundColor: "background.default",
@@ -327,7 +329,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
                 height: "100%",
               }}>
                 {agents?.length == 0 &&
-                <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>No agent available, create agent first</Typography>
+                <LargeLabel>No agent available, create agent first please</LargeLabel>
                 }
                 {agents && agents.length > 0 &&
                 <>
@@ -354,13 +356,14 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
           <>
           <Box
           sx={{
+            flexDirection: "column",
+            display: "flex",
             width: "20%",
             height: "100%",
           }}>
           <Box
             sx={{
-              height: "90%",
-              overflow: "auto",
+              flexGrow: 1,
             }}>
           <GroupPanel
             groups={groups}
@@ -369,7 +372,6 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
             storageDispatcher={storageDispatcher}/>
             </Box>
             <Box
-
               sx={{
                 height: "10%",
                 display: "flex",
@@ -385,9 +387,8 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
         <Box
           sx={{
             display: "flex",
-            flexGrow: 1,
-            maxWidth: "80%",
             height: "100%",
+            flexGrow: 1,
             marginLeft: 5,
             flexDirection: "column",
           }}>
@@ -395,9 +396,8 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
             <List
               sx={{
                 flexGrow: 1,
-                maxHeight: "100%",
+                height: "100%",
                 overflow: "auto",
-                height: "80%",
               }}>
 
             {currentConversation.map((message, index) => (
@@ -423,7 +423,10 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
           {respondingAgentAlias &&
           <Stack
             spacing={1}
-            direction="row">
+            direction="row"
+            sx={{
+              height: "5%",
+            }}>
             <SmallLabel
               color='text.secondary'
               sx = {{
@@ -433,7 +436,6 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
             </SmallLabel>
             <ThreeDotBouncingLoader/>
           </Stack>
-            
           }
           
           {currentGroup && currentGroup.agents.length == 0 && 
@@ -449,6 +451,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
           {currentGroup && agentExecutors && agentExecutors.length > 0 &&
           <Box
             sx={{
+              height: "20%",
               marginBottom: 2,
               marginRight: 5,
             }}>

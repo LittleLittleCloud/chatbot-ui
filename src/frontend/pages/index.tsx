@@ -21,7 +21,7 @@ import {
 import { saveFolders } from '@/utils/app/folders';
 import { exportData, importData } from '@/utils/app/importExport';
 import { savePrompts } from '@/utils/app/prompts';
-import { AppBar, Button, Toolbar, Typography, Box, createTheme, Divider, Stack, Tooltip, IconButton, Avatar, Menu, MenuItem, Chip } from '@mui/material';
+import { AppBar, Button, Toolbar, Typography, Box, createTheme, Divider, Stack, Tooltip, IconButton, Avatar, Menu, MenuItem, Chip, CssBaseline, FormControlLabel, Switch } from '@mui/material';
 import { IconArrowBarLeft, IconArrowBarRight } from '@tabler/icons-react';
 import { GetServerSideProps, GetStaticProps } from 'next';
 import { useTranslation } from 'next-i18next';
@@ -45,6 +45,7 @@ import { IAgent } from '@/types/agent';
 import { agentReducer } from '@/utils/app/agentReducer';
 import getConfig from 'next/config';
 import { storageReducer } from '@/utils/app/storageReducer';
+import { Label, LargeLabel, SmallLabel } from '@/components/Global/EditableSavableTextField';
 
 const { publicRuntimeConfig } = getConfig();
 const Home: React.FC<IStorage> = () => {
@@ -133,59 +134,87 @@ const Home: React.FC<IStorage> = () => {
   const tabs = ['Chat', 'Agent']
   const settings = ['Import', 'Export'];
   const [selectedTab, setSelectedTab] = useState(tabs[0]);
-  const theme = createTheme({
+  const darkTheme = createTheme({
     palette: {
       mode: 'dark',
+      background: {
+        secondary: '#1E1E1E',
+        default: '#121212', 
+        paper: '#1E1E1E'
+      }
+    },
+  });
+
+  const lightTheme = createTheme({
+    palette: {
+      mode: 'light',
+      background: {
+        secondary: '#F5F5F5',
+        default: '#FFFFFF', 
+        paper: '#FFFFFF'
+      }
     },
   });
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={lightMode == "light" ? lightTheme : darkTheme }>
       <Head>
         <title>Chatbot UI</title>
-        <meta
-          name="viewport"
-          content="height=device-height ,width=device-width, initial-scale=1, user-scalable=no"
-        />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      
-      <main
-          className={`text-sm text-white dark:text-white ${lightMode}`}
-        >
+      <CssBaseline />
       <Box
         sx={{
           display: 'flex',
           flexDirection: "column",
           width: "100%",
-          height: "100vh",
-          maxHeight: "100vh"}}>
-        <Box
-          sx={{
-            Height: "10%",
-          }}>
-          <AppBar position='static' >
+          height: "100vh"}}>
+          <AppBar
+            position='static'
+            sx={{
+              flexGrow: 1,
+            }}>
           <Toolbar variant="regular">
             <Stack
               direction="row"
               spacing={2}
               sx={{
                 flexGrow: 1,
+                alignItems: "baseline",
               }}>
-              <Typography
-                variant="h6"
-                component="div">
+              <LargeLabel>
                 LLM Chat
-              </Typography>
-              <Chip
-                size='medium'
-                label={`${publicRuntimeConfig.version}`} />
+              </LargeLabel>
+              
+              <SmallLabel>
+                {`${publicRuntimeConfig.version}`}
+              </SmallLabel>
             </Stack>
             <Stack direction="row" spacing={2}>
               {hasChange && <Button variant='outlined' onClick={() => setIsSaving(true)}>save</Button>}
+              <FormControlLabel
+                value="start"
+                control={
+                  <Switch
+                    color="default"
+                    checked={lightMode === 'light'}
+                    onChange={() => handleLightMode(lightMode === 'light' ? 'dark' : 'light')} />
+                }
+                label={
+                  <SmallLabel>
+                    {lightMode === 'light' ? 'Light' : 'Dark'}
+                  </SmallLabel>
+                }
+                labelPlacement="start"
+              />
               {
                 tabs.map((tab, i) => {
                   return (
-                    <Button key={i} sx={{ color: '#fff' }} onClick={() => setSelectedTab(tab)} >{tab}</Button>
+                    <Button
+                      key={i}
+                      sx={{ color: '#fff' }}
+                      onClick={() => setSelectedTab(tab)}>
+                      <SmallLabel>{tab}</SmallLabel>
+                    </Button>
                   )
                 })
               }
@@ -233,11 +262,10 @@ const Home: React.FC<IStorage> = () => {
             </Stack>
             </Toolbar>
           </AppBar>
-        </Box>
       <Box
         sx={{
-          flexGrow: 1,
-          height: "90%",
+          weight: '100%',
+          height: '92%',
         }}>
         {selectedTab == 'Chat' && 
           <Chat
@@ -254,7 +282,6 @@ const Home: React.FC<IStorage> = () => {
         )}
       </Box>
       </Box>
-      </main>
       </ThemeProvider>
   );
 };

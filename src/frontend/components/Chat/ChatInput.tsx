@@ -14,7 +14,10 @@ import {
 } from 'react';
 import { PromptList } from './PromptList';
 import { VariableModal } from './VariableModal';
-import { Box, Button, TextField } from '@mui/material';
+import { Box, Button, ButtonGroup, Stack, TextField, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { CentralBox, Label, SmallClickableLabel, SmallLabel, SmallTextButton, TinyLabel, TinyTextButton } from '../Global/EditableSavableTextField';
+import { Shadows } from '@mui/system';
+import { Markdown } from '../Global/Markdown';
 
 interface Props {
   messageIsStreaming: boolean;
@@ -36,6 +39,7 @@ export const ChatInput: FC<Props> = ({
   const [promptInputValue, setPromptInputValue] = useState('');
   const [variables, setVariables] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [preview, setPreview] = useState<boolean>(false);
 
   const promptListRef = useRef<HTMLUListElement | null>(null);
 
@@ -67,7 +71,7 @@ export const ChatInput: FC<Props> = ({
       return;
     }
     var now = Date.now();
-    onSend({ from: '__user', content, type: 'text/plain', timestamp: now });
+    onSend({ from: '__user', content, type: 'message.markdown', timestamp: now });
     setContent('');
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {
@@ -195,18 +199,26 @@ export const ChatInput: FC<Props> = ({
   }, []);
 
   return (
-        <Box
+        <CentralBox
           sx={{
             display: 'flex',
             width: '100%',
-            flexDirection: 'row',
-            gap: 2,
+            borderRadius: '1rem',
           }}>
-          <TextField
+          <Stack
+            direction="column"
+            width="100%"
+            spacing={0.5}>
+          {
+            !preview && 
+            <TextField
             sx = {{
               flexGrow: 1,
               '& .MuiOutlinedInput-root': {
                 borderRadius: '0.5rem',
+                fieldset: {
+                  borderColor: 'divider',
+                },
                 '&:hover fieldset': {
                   borderColor: 'primary.main',
                 },
@@ -214,16 +226,53 @@ export const ChatInput: FC<Props> = ({
             }}
             // ref={textareaRef}
             multiline={true}
-            placeholder={t('Type a message') || ''}
+            placeholder={t('Type a message, markdown is supported, attach file by drag & drop') || ''}
             onChange={handleChange}
-            value={content}
-            />
+            value={content}/>
+          }
+          {
+            preview &&
+            <Box
+              sx={{
+                width: '100%',
+                borderRadius: '0.5rem',
+                border: '1px solid',
+                borderColor: 'divider',
+                padding: '1rem',
+              }}>
+              <Markdown>{content ?? "nothing to preview"}</Markdown>
+            </Box>
+          }
+            <Stack
+              direction="row"
+              spacing={1}
+              width="100%">
+              <ToggleButtonGroup
+                size='small'
+                sx={{
+                  flexGrow: 1,
+                }}>
+                <ToggleButton
+                  value="Write"
+                  onClick={() => setPreview(false) }>
+                  <TinyLabel>Write</TinyLabel>
+                </ToggleButton>
+                <ToggleButton
+                  value="Preview"
+                  onClick={() => setPreview(true)}>
+                  <TinyLabel>Preview</TinyLabel>
+                </ToggleButton>
+              </ToggleButtonGroup>
 
-          <Button
-            variant="outlined"
-            onClick={handleSend}>
-            <IconSend className="opacity-60" />
-          </Button>
-        </Box>
+              <ButtonGroup
+                size='small'>
+                <TinyTextButton
+                  onClick={handleSend}>
+                    Send
+                </TinyTextButton>
+              </ButtonGroup>
+            </Stack>
+          </Stack>
+        </CentralBox>
   );
 };
