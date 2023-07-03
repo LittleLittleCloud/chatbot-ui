@@ -451,7 +451,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
           {currentGroup && agentExecutors && agentExecutors.length > 0 &&
           <Box
             sx={{
-              height: "20%",
+              maxHeight: "50%",
               marginBottom: 2,
               marginRight: 5,
             }}>

@@ -14,21 +14,20 @@ import {
 } from 'react';
 import { PromptList } from './PromptList';
 import { VariableModal } from './VariableModal';
-import { Box, Button, ButtonGroup, Stack, TextField, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Box, Button, ButtonGroup, Stack, TextField, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
 import { CentralBox, Label, SmallClickableLabel, SmallLabel, SmallTextButton, TinyLabel, TinyTextButton } from '../Global/EditableSavableTextField';
 import { Shadows } from '@mui/system';
 import { Markdown } from '../Global/Markdown';
+import { ImageBlobStorage } from '@/utils/blobStorage';
 
 interface Props {
   messageIsStreaming: boolean;
   onSend: (message: IMessage) => void;
-  textareaRef: MutableRefObject<HTMLTextAreaElement | null>;
 }
 
 export const ChatInput: FC<Props> = ({
   messageIsStreaming,
   onSend,
-  textareaRef,
 }) => {
   const { t } = useTranslation('chat');
 
@@ -42,6 +41,7 @@ export const ChatInput: FC<Props> = ({
   const [preview, setPreview] = useState<boolean>(false);
 
   const promptListRef = useRef<HTMLUListElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -152,16 +152,49 @@ export const ChatInput: FC<Props> = ({
     }
   };
 
-  const handleSubmit = (updatedVariables: string[]) => {
-    const newContent = content?.replace(/{{(.*?)}}/g, (match, variable) => {
-      const index = variables.indexOf(variable);
-      return updatedVariables[index];
-    });
+  const uploadImageFileHandler = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      console.log(e.target?.result);
+      let imageBlob = await ImageBlobStorage;
+      // update file name with timestamp
+      let fileName = `${Date.now()}-${file.name}`;
+      let blob = new Blob([e.target?.result!]);
+      await imageBlob.saveBlob(blob, fileName);
+      // insert into text value
+      setContent((prevContent) => {
+        // insert to text area ref. selectionstart
+        if (textareaRef && textareaRef.current) {
+          if (prevContent === undefined) {
+            return `![](${fileName})`;
+          }
+          
+          let textArea = textareaRef.current;
+          let startPos = textArea.selectionStart;
+          let endPos = textArea.selectionEnd;
+          let content = prevContent?.substring(0, startPos) + `![](${fileName})` + prevContent?.substring(endPos, prevContent.length);
+          
+          return content;
+        }
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
 
-    setContent(newContent);
+  const handleUploadImage = ({target}: {target: HTMLInputElement}) => {
+    if (!target.files) {
+      return;
+    }
+    const file = target.files[0];
+    uploadImageFileHandler(file);
+  };
 
-    if (textareaRef && textareaRef.current) {
-      textareaRef.current.focus();
+  const dropImageHandler = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      let file = e.dataTransfer.files[0];
+      uploadImageFileHandler(file);
     }
   };
 
@@ -203,11 +236,13 @@ export const ChatInput: FC<Props> = ({
           sx={{
             display: 'flex',
             width: '100%',
+            height: '100%',
             borderRadius: '1rem',
           }}>
           <Stack
             direction="column"
             width="100%"
+            height="100%"
             spacing={0.5}>
           {
             !preview && 
@@ -224,7 +259,8 @@ export const ChatInput: FC<Props> = ({
                 },
               },
             }}
-            // ref={textareaRef}
+            onDrop={dropImageHandler}
+            inputRef={textareaRef}
             multiline={true}
             placeholder={t('Type a message, markdown is supported, attach file by drag & drop') || ''}
             onChange={handleChange}
@@ -235,12 +271,16 @@ export const ChatInput: FC<Props> = ({
             <Box
               sx={{
                 width: '100%',
+                height: '100%',
                 borderRadius: '0.5rem',
                 border: '1px solid',
                 borderColor: 'divider',
                 padding: '1rem',
+                overflow: 'scroll'
               }}>
-              <Markdown>{content ?? "nothing to preview"}</Markdown>
+              <Markdown
+                height="10%"
+              >{content ?? "nothing to preview"}</Markdown>
             </Box>
           }
             <Stack
@@ -261,6 +301,23 @@ export const ChatInput: FC<Props> = ({
                   value="Preview"
                   onClick={() => setPreview(true)}>
                   <TinyLabel>Preview</TinyLabel>
+                </ToggleButton>
+                <ToggleButton
+                  value="Upload a File">
+                  <Tooltip title="Upload a File, supported format: csv, txt, tsv">
+                    <TinyLabel>Upload a File</TinyLabel>
+                  </Tooltip>
+                </ToggleButton>
+                <ToggleButton
+                  component='label'>
+                  <Tooltip title="Upload an image, supported format: png, jpg, jpeg, gif">
+                    <TinyLabel>Upload an image</TinyLabel>
+                  </Tooltip>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUploadImage}
+                    hidden/>
                 </ToggleButton>
               </ToggleButtonGroup>
 

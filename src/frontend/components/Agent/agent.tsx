@@ -127,7 +127,6 @@ export const AgentPage: FC<{availableAgents: IAgent[], storageDispatcher: Dispat
             var blob = new Blob([data!]);
             var blobStorage = await ImageBlobStorage;
             await blobStorage.saveBlob(blob, file.name);
-            var url = URL.createObjectURL(blob);
             storageDispatcher({type: 'updateAgent', payload: {...selectedAgent!, avatar: file.name}, original: selectedAgent});
             setSelectedAgent({...selectedAgent!, avatar: file.name});
         }

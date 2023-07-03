@@ -100,7 +100,13 @@ export class IndexDBBlobStorage implements IBlobStorage
             };
         });
     }
+
+    async getBlobUrl(name: string): Promise<string> {
+        const blob = await this.getBlob(name);
+        return URL.createObjectURL(blob);
+    }
 }
 
 export const ImageBlobStorage = IndexDBBlobStorage.init("image");
+export const FileBlobStorage = IndexDBBlobStorage.init("file");
 export const TestBlobStorage = IndexDBBlobStorage.init("test");

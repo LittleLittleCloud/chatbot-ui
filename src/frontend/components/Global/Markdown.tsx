@@ -8,13 +8,15 @@ import { dark } from "react-syntax-highlighter/dist/cjs/styles/hljs";
 import { CentralBox } from "./EditableSavableTextField";
 import { CodeBlock } from "../Markdown/CodeBlock";
 import remarkGfm from "remark-gfm";
+import { ImageBlobStorage } from "@/utils/blobStorage";
+import { Image } from "../Markdown/Image";
 
 export const Markdown = (props: ReactMarkdownOptions) => (
     <StyledMarkdown
         {...props}
         remarkPlugins={[remarkGfm]}
         components={{
-            ...props.components,
+            img: ({...props}) => <Image {...props}/>,
             code: ({node, inline, className, children, ...props}) => {
                 const match = /language-(\w+)/.exec(className || '')
                 return !inline && match ? (
@@ -28,7 +30,8 @@ export const Markdown = (props: ReactMarkdownOptions) => (
                     {children}
                   </code>
                 )
-            }
+            },
+            ...props.components,
         }}/>
 );
 
