@@ -59,14 +59,14 @@ export const ChatMessage: FC<Props> = memo(
     }, [isEditing]);
 
     const onDeleteMessageHandler = () => {
-      if (confirm('Are you sure you want to delete this message?')) {
-        onDeleteMessage && onDeleteMessage(message);
+      if (confirm('Are you sure you want to delete this message???') && onDeleteMessage != undefined) {
+        onDeleteMessage(message);
       }
     };
 
     const onResendMessageHandler = () => {
-      if (confirm('Are you sure you want to resend this message?')) {
-        onResendMessage && onResendMessage(message);
+      if (confirm('Are you sure you want to resend this message?') && onResendMessage) {
+        onResendMessage(message);
       }
     };
 
@@ -161,10 +161,5 @@ export const ChatMessage: FC<Props> = memo(
           </Stack>
         </Box>
     );
-  },
-  (prevProps, nextProps) => {
-    return prevProps.message.id === nextProps.message.id
-      && prevProps.message.content === nextProps.message.content
-  }
-);
+  });
 ChatMessage.displayName = 'ChatMessage';
