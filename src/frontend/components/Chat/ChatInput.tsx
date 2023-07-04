@@ -18,7 +18,7 @@ import { Box, Button, ButtonGroup, Stack, TextField, ToggleButton, ToggleButtonG
 import { CentralBox, Label, SmallClickableLabel, SmallLabel, SmallTextButton, TinyLabel, TinyTextButton } from '../Global/EditableSavableTextField';
 import { Shadows } from '@mui/system';
 import { Markdown } from '../Global/Markdown';
-import { ImageBlobStorage } from '@/utils/blobStorage';
+import { FileBlobStorage, ImageBlobStorage } from '@/utils/blobStorage';
 
 interface Props {
   messageIsStreaming: boolean;
@@ -39,6 +39,7 @@ export const ChatInput: FC<Props> = ({
   const [variables, setVariables] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [preview, setPreview] = useState<boolean>(false);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
 
   const promptListRef = useRef<HTMLUListElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -152,27 +153,39 @@ export const ChatInput: FC<Props> = ({
     }
   };
 
-  const uploadImageFileHandler = (file: File) => {
+  const uploadFileHandler = (file: File) => {
     const reader = new FileReader();
     reader.onload = async (e) => {
-      console.log(e.target?.result);
-      let imageBlob = await ImageBlobStorage;
+      // first, check if file is image or one of [csv, tsv, json, txt, pdf]
+      // if not, throw an alert and return
+      let allowedFileTypes = ['image', 'text'];
+      let allowedExtensions = ['csv', 'tsv', 'json', 'txt', 'pdf'];
+      let fileType = file.type.split('/')[0];
+      let fileExtension = file.name.split('.').pop();
+      if (!allowedFileTypes.includes(fileType) && !allowedExtensions.includes(fileExtension)) {
+        alert('File type not supported, please upload an image or text file');
+        return;
+      }
+
+      let blobStorage = await FileBlobStorage;
       // update file name with timestamp
       let fileName = `${Date.now()}-${file.name}`;
       let blob = new Blob([e.target?.result!]);
-      await imageBlob.saveBlob(blob, fileName);
+      await blobStorage.saveBlob(blob, fileName);
       // insert into text value
       setContent((prevContent) => {
+        let isImage = fileType === 'image';
+        let insertText = isImage ? `![](${fileName})` : `[${fileName}](${fileName})`;
         // insert to text area ref. selectionstart
         if (textareaRef && textareaRef.current) {
           if (prevContent === undefined) {
-            return `![](${fileName})`;
+            return insertText;
           }
           
           let textArea = textareaRef.current;
           let startPos = textArea.selectionStart;
           let endPos = textArea.selectionEnd;
-          let content = prevContent?.substring(0, startPos) + `![](${fileName})` + prevContent?.substring(endPos, prevContent.length);
+          let content = prevContent?.substring(0, startPos) + insertText + prevContent?.substring(endPos, prevContent.length);
           
           return content;
         }
@@ -181,21 +194,34 @@ export const ChatInput: FC<Props> = ({
     reader.readAsArrayBuffer(file);
   }
 
-  const handleUploadImage = ({target}: {target: HTMLInputElement}) => {
+  const handleUploadFile = ({target}: {target: HTMLInputElement}) => {
     if (!target.files) {
       return;
     }
     const file = target.files[0];
-    uploadImageFileHandler(file);
+    uploadFileHandler(file);
   };
 
-  const dropImageHandler = (e: React.DragEvent<HTMLTextAreaElement>) => {
+  const dropHandler = (e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       let file = e.dataTransfer.files[0];
-      uploadImageFileHandler(file);
+      uploadFileHandler(file);
     }
+    setIsDragOver(false);
+  };
+
+  const dragEnterHandler = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const dragLeaveHandler = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
   };
 
   useEffect(() => {
@@ -233,6 +259,9 @@ export const ChatInput: FC<Props> = ({
 
   return (
         <CentralBox
+          onDrop={dropHandler}
+          onDragOver={dragEnterHandler}
+          onDragLeave={dragLeaveHandler}
           sx={{
             display: 'flex',
             width: '100%',
@@ -244,6 +273,15 @@ export const ChatInput: FC<Props> = ({
             width="100%"
             height="100%"
             spacing={0.5}>
+          {
+            isDragOver &&
+            <TinyLabel
+              sx = {{
+                color: 'text.secondary',
+              }}>
+              {t('Drop to upload')}
+            </TinyLabel>
+          }
           {
             !preview && 
             <TextField
@@ -259,7 +297,6 @@ export const ChatInput: FC<Props> = ({
                 },
               },
             }}
-            onDrop={dropImageHandler}
             inputRef={textareaRef}
             multiline={true}
             placeholder={t('Type a message, markdown is supported, attach file by drag & drop') || ''}
@@ -303,10 +340,15 @@ export const ChatInput: FC<Props> = ({
                   <TinyLabel>Preview</TinyLabel>
                 </ToggleButton>
                 <ToggleButton
-                  value="Upload a File">
-                  <Tooltip title="Upload a File, supported format: csv, txt, tsv">
+                  component='label'>
+                  <Tooltip title="Upload a File, supported format: csv, txt, tsv, json, pdf">
                     <TinyLabel>Upload a File</TinyLabel>
                   </Tooltip>
+                  <input
+                    type="file"
+                    accept=".csv, .txt, .tsv, .json, .pdf"
+                    onChange={handleUploadFile}
+                    hidden/>
                 </ToggleButton>
                 <ToggleButton
                   component='label'>
@@ -316,7 +358,7 @@ export const ChatInput: FC<Props> = ({
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={handleUploadImage}
+                    onChange={handleUploadFile}
                     hidden/>
                 </ToggleButton>
               </ToggleButtonGroup>
