@@ -9,7 +9,7 @@ import { CentralBox } from "./EditableSavableTextField";
 import { CodeBlock } from "../Markdown/CodeBlock";
 import remarkGfm from "remark-gfm";
 import { ImageBlobStorage } from "@/utils/blobStorage";
-import { Anchor, Image } from "../Markdown/Image";
+import { Anchor, Image, MemorizedImage } from "../Markdown/Image";
 
 export const Markdown = (props: ReactMarkdownOptions) => (
     <StyledMarkdown
@@ -17,7 +17,7 @@ export const Markdown = (props: ReactMarkdownOptions) => (
         remarkPlugins={[remarkGfm]}
         components={{
             a: ({...props}) => <Anchor {...props}/>,
-            img: ({...props}) => <Image {...props}/>,
+            img: ({...props}) => <MemorizedImage key={props.src} {...props}/>,
             code: ({node, inline, className, children, ...props}) => {
                 const match = /language-(\w+)/.exec(className || '')
                 return !inline && match ? (

@@ -18,7 +18,7 @@ import { Box, Button, ButtonGroup, Stack, TextField, ToggleButton, ToggleButtonG
 import { CentralBox, Label, SmallClickableLabel, SmallLabel, SmallTextButton, TinyLabel, TinyTextButton } from '../Global/EditableSavableTextField';
 import { Shadows } from '@mui/system';
 import { Markdown } from '../Global/Markdown';
-import { FileBlobStorage, ImageBlobStorage } from '@/utils/blobStorage';
+import { ChatBlobStorage, ImageBlobStorage } from '@/utils/blobStorage';
 
 interface Props {
   messageIsStreaming: boolean;
@@ -167,7 +167,7 @@ export const ChatInput: FC<Props> = ({
         return;
       }
 
-      let blobStorage = await FileBlobStorage;
+      let blobStorage = await ChatBlobStorage;
       // update file name with timestamp
       let fileName = `${Date.now()}-${file.name}`;
       let blob = new Blob([e.target?.result!]);

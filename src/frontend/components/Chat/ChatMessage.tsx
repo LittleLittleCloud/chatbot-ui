@@ -162,5 +162,9 @@ export const ChatMessage: FC<Props> = memo(
         </Box>
     );
   },
+  (prevProps, nextProps) => {
+    return prevProps.message.id === nextProps.message.id
+      && prevProps.message.content === nextProps.message.content
+  }
 );
 ChatMessage.displayName = 'ChatMessage';

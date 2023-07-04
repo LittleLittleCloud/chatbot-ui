@@ -1,6 +1,7 @@
 import { IZeroshotAgentMessage } from "@/agent/chatAgent";
 import { SmallLabel, TinyClickableLabel, TinyLabel } from "@/components/Global/EditableSavableTextField";
 import { Markdown } from "@/components/Global/Markdown";
+import { MemoizedReactMarkdown } from "@/components/Markdown/MemoizedReactMarkdown";
 import { IMessage } from "@/types/chat";
 import { providerType } from "@/utils/app/configPanelProvider";
 import { Stack, Divider } from "@mui/material";
@@ -22,7 +23,9 @@ export const MarkdownMessage: providerType<IMarkdownMessage> = (message, onChang
             spacing={1}>
             {
                 openContent === 'markdown' &&
-                <Markdown>{content}</Markdown>
+                <MemoizedReactMarkdown>
+                    {content}
+                </MemoizedReactMarkdown>
             }
             {
                 openContent === 'plain text' &&

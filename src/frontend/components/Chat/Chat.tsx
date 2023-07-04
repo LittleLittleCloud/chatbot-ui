@@ -394,6 +394,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
           }}>
           { currentConversation && agentExecutors && agentExecutors.length > 0 &&
             <List
+              key={currentGroup?.name}
               sx={{
                 flexGrow: 1,
                 height: "100%",

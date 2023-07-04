@@ -16,5 +16,11 @@ export function getMessageUIProvider(id: string): providerType<IMessage>{
 }
 
 export function hasMessageUIProvider(id: string){
-    return container.isBound(id);
+    try
+    {
+        return container.isBound(id);
+    }
+    catch(e){
+        return false;
+    }
 }
