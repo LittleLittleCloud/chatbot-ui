@@ -110,3 +110,4 @@ export class IndexDBBlobStorage implements IBlobStorage
 export const ImageBlobStorage = IndexDBBlobStorage.init("image");
 export const ChatBlobStorage = IndexDBBlobStorage.init("chat");
 export const TestBlobStorage = IndexDBBlobStorage.init("test");
+export const vectorStorage = IndexDBBlobStorage.init("vector");

@@ -10,21 +10,20 @@ import {
   } from 'react';
 
 import { Box, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, Tab, Tabs, DialogTitle, Dialog, DialogActions, DialogContent, DialogContentText, ListItemAvatar, IconButton, Menu, MenuItem } from '@mui/material';
-import { IAgent } from '@/types/agent';
-import { AvatarEditControl, CentralBox, EditableSavableTextField, EditableSelectField, LargeAvatar, SelectableListItem, SettingSection, SmallAvatar, SmallLabel, SmallSelectField, SmallSelectSetting, SmallTextField, SmallTextSetting, TinyAvatar } from '../Global/EditableSavableTextField';
+import { CentralBox, EditableSavableTextField, EditableSelectField, LargeAvatar, SelectableListItem, SettingSection, SmallAvatar, SmallLabel, SmallSelectField, SmallSelectSetting, SmallTextField, SmallTextSetting, TinyAvatar } from '../Global/EditableSavableTextField';
 import { TabContext, TabPanel } from '@mui/lab';
 import { ReactElement } from 'react-markdown/lib/react-markdown';
-import { getAgentConfigUIProvider, getAgentDefaultConfig, getAvailableAgents, hasAgentConfigUIProvider, hasAgentExecutorProvider } from '@/utils/app/agentProvider';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
-import { AgentAction } from '@/utils/app/agentReducer';
 import { StorageAction } from '@/utils/app/storageReducer';
 import { ImageBlobStorage } from '@/utils/blobStorage';
+import { AgentProvider } from '@/agent/agentProvider';
+import { IAgent } from '@/agent/type';
 
 const CreateAgentDialog = (props: {open: boolean, onClose: () => void, storageDispatcher: Dispatch<StorageAction>}) => {
     const [alias, setAlias] = useState("");
     const [agentID, setAgentID] = useState<string | null>(null);
-    const availableAgents = getAvailableAgents();
+    const availableAgents = AgentProvider.getAvailableModels();
     const [isSavable, setIsSavable] = useState(false);
 
     useEffect(() => {
@@ -70,7 +69,7 @@ const CreateAgentDialog = (props: {open: boolean, onClose: () => void, storageDi
                 <Button onClick={props.onClose}>Cancel</Button>
                 <Button
                     disabled={!isSavable}
-                    onClick={() => onAgentCreatedHandler({...getAgentDefaultConfig(agentID!), alias: alias})}>Create</Button>
+                    onClick={() => onAgentCreatedHandler({...AgentProvider.getDefaultValue(agentID!), alias: alias})}>Create</Button>
             </DialogActions>
         </Dialog>
     );
@@ -84,18 +83,18 @@ export const AgentPage: FC<{availableAgents: IAgent[], storageDispatcher: Dispat
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
     const [agentToDelete, setAgentToDelete] = useState<IAgent | null>(null);
-    const registeredAgents = getAvailableAgents();
+    const registeredAgents = AgentProvider.getAvailableModels();
 
     const handleClose = () => {
         setAnchorEl(null);
       };
 
     const AgentAdvancedSettingPanel = (props: { agent: IAgent, onchange: (agent: IAgent) => void}) => {
-        if(!hasAgentConfigUIProvider(props.agent.type)){
+        if(!AgentProvider.hasProvider(props.agent.type)){
             return <Typography>Not implemented</Typography>
         }
 
-        return getAgentConfigUIProvider(props.agent.type)(props.agent, props.onchange);
+        return AgentProvider.getConfigUIProvider(props.agent.type)(props.agent, props.onchange);
     }
 
     const onCloseSettingMenu = () => {
@@ -314,6 +313,7 @@ export const AgentPage: FC<{availableAgents: IAgent[], storageDispatcher: Dispat
                                     direction="column"
                                     spacing={2}>
                                     <SmallTextSetting name="alias" toolTip='The name of the agent' value={selectedAgent.alias} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, alias: value!}, selectedAgent)} />
+                                    <SmallTextSetting name="description" toolTip='The description of the agent' value={selectedAgent.description} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, description: value!}, selectedAgent)} />
                                     <SmallSelectSetting name='agent type' toolTip='the type of agent' options={registeredAgents} value={selectedAgent.type} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, type: value!}, selectedAgent)}/>
                                 </Stack>
                                 <CentralBox

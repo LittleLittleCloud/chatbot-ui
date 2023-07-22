@@ -1,4 +1,4 @@
-import { IMessage } from "@/types/chat"
+import { IMessage } from "@/message/type";
 import { ChatMemory } from "./chatMemory";
 
 test('ChatMemory can parse history using ChatML', async () => {

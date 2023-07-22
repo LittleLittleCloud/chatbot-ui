@@ -1,7 +1,6 @@
-import { ILLMModel } from "@/types/model";
-import { CallbackManager, CallbackManagerForLLMRun } from "langchain/callbacks";
-import { LLMResult } from "langchain/dist/schema";
-import { BaseLLM, LLM } from "langchain/llms/base";
+import { ChatOpenAI } from "langchain/chat_models/openai";
+import { OpenAI } from "langchain";
+import { ILLMModel } from "../type";
 
 export interface IOpenAIModel extends ILLMModel
 {
@@ -29,123 +28,43 @@ export interface IGPT35Turbo extends IOpenAIModel{
     isChatModel: true;
 }
 
-interface IOpenAIModelOutput{
-    id: string;
-    object: string;
-    created: number;
-    model: string;
-    choices: {
-        text: string;
-        message: {
-            role: string;
-            content: string;
-        };
-        index: number;
-        logprobs: {
-            token_logprobs: number[];
-            top_logprobs: number[];
-        };
-        finish_reason: string;
-    }[];
-    usage: {
-        prompt_tokens: number;
-        completion_tokens: number;
-        total_tokens: number;
-    };
-}
-
-export class OpenAIModel extends LLM{
+export class TextDavinci003 extends OpenAI{
     type: string;
-    isStreaming: boolean;
-    maxTokens: number;
-    temperature: number;
-    topP: number;
-    presencePenalty: number;
-    frequencyPenalty: number;
-    stop: string[];
-    apiKey?: string;
-    model?: string;
-    isChatModel: boolean;
+    constructor(fields: ITextDavinci003){
+        super({
+            temperature: fields.temperature ?? 0.7,
+            topP: fields.topP ?? 1,
+            presencePenalty: fields.presencePenalty ?? 0,
+            frequencyPenalty: fields.frequencyPenalty ?? 0,
+            stop: fields.stop,
+            streaming: fields.isStreaming ?? false,
+            openAIApiKey: fields.apiKey,
+            modelName: fields.model,
+        })
 
-    constructor(fields: IOpenAIModel){
-        super({});
-        this.type = fields.type;
-        this.isStreaming = fields.isStreaming;
-        this.maxTokens = fields.maxTokens;
-        this.temperature = fields.temperature;
-        this.topP = fields.topP;
-        this.presencePenalty = fields.presencePenalty;
-        this.frequencyPenalty = fields.frequencyPenalty;
-        this.stop = fields.stop;
-        this.apiKey = fields.apiKey;
-        this.model = fields.model;
-        this.isChatModel = fields.isChatModel;
+        this.type = fields.type ?? "openai.text-davinci-003";
     }
 
-    async _call(prompt: string, stop?: string[] | this["CallOptions"] | undefined, runManager?: CallbackManagerForLLMRun | undefined): Promise<string> {
-        if(this.isChatModel){
-            var endPoint = "https://api.openai.com/v1/chat/completions";
-            var message = [
-                {"role": "system", "content": prompt},
-            ];
-            var response = await fetch(endPoint, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${this.apiKey}`
-                },
-                body: JSON.stringify({
-                    messages: message,
-                    max_tokens: this.maxTokens,
-                    temperature: this.temperature,
-                    top_p: this.topP,
-                    presence_penalty: this.presencePenalty,
-                    frequency_penalty: this.frequencyPenalty,
-                    stop: stop ?? this.stop,
-                    stream: false,
-                    model: this.model,
-                })
-            });
+    _llmType(): string {
+        return this.type;
+    }
+}
 
-            if(!response.ok){
-                var error = await response.json();
-                var errorMessage = `Failed to call OpenAI API: ${error.error.message}`;
-                throw new Error(errorMessage);
-            }
+export class GPT_35_TURBO extends ChatOpenAI{
+    type: string;
+    constructor(fields: IGPT35Turbo){
+        super({
+            temperature: fields.temperature ?? 0.7,
+            topP: fields.topP ?? 1,
+            presencePenalty: fields.presencePenalty ?? 0,
+            frequencyPenalty: fields.frequencyPenalty ?? 0,
+            stop: fields.stop ?? ["\n"],
+            streaming: fields.isStreaming ?? false,
+            openAIApiKey: fields.apiKey,
+            modelName: fields.model,
+        })
 
-            var result = await response.json() as IOpenAIModelOutput;
-            return result.choices[0].message.content;
-        }
-        else{
-            var endPoint = "https://api.openai.com/v1/completions";
-            var response = await fetch(endPoint, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${this.apiKey}`
-                },
-                body: JSON.stringify({
-                    prompt: prompt,
-                    max_tokens: this.maxTokens,
-                    temperature: this.temperature,
-                    top_p: this.topP,
-                    presence_penalty: this.presencePenalty,
-                    frequency_penalty: this.frequencyPenalty,
-                    stop: stop ?? this.stop,
-                    stream: false,
-                    model: this.model,
-                })
-            });
-    
-            if(!response.ok){
-                var error = await response.json();
-                var errorMessage = `Failed to call OpenAI API: ${error.error.message}`;
-                throw new Error(errorMessage);
-            }
-    
-            var result = await response.json() as IOpenAIModelOutput;
-            return result.choices[0].text;
-        }
+        this.type = fields.type ?? "openai.gpt-35-turbo";
     }
 
     _llmType(): string {

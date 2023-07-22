@@ -1,4 +1,3 @@
-import { IMessage, Message } from '@/types/chat';
 import { KeyValuePair } from '@/types/data';
 import { ErrorMessage } from '@/types/error';
 import { OpenAIModel } from '@/types/openai';
@@ -25,19 +24,19 @@ import { ErrorMessageDiv } from './ErrorMessageDiv';
 import { ModelSelect } from './ModelSelect';
 import { SystemPrompt } from './SystemPrompt';
 import { Alert, Avatar, Box, Button, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, List, ListItem, ListItemButton, ListItemAvatar, ListItemText, Menu, MenuItem, Paper, Stack, Typography, AvatarGroup } from '@mui/material';
-import { IAgent, IAgentExcutor } from '@/types/agent';
 import { AgentExecutor } from 'langchain/agents';
-import { getAgentExecutorProvider } from '@/utils/app/agentProvider';
 import { IRecord } from '@/types/storage';
-import { CentralBox, EditableSavableTextField, EditableSelectField, LargeLabel, SelectableListItem, SmallAvatar, SmallLabel, SmallMultipleSelectField, SmallSelectField, SmallTextField, TinyAvatar } from '../Global/EditableSavableTextField';
+import { CentralBox, EditableSavableTextField, EditableSelectField, LargeLabel, SelectableListItem, SmallAvatar, SmallLabel, SmallMultipleSelectField, SmallSelectField, SmallTextButton, SmallTextField, TinyAvatar } from '../Global/EditableSavableTextField';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
 import { GroupAction, GroupCmd, groupReducer } from '@/utils/app/groupReducer';
 import { IGroup } from '@/types/group';
-import { groupEnd } from 'console';
+import { Console, groupEnd } from 'console';
 import { StorageAction } from '@/utils/app/storageReducer';
-import { ThreeDots } from 'react-loader-spinner';
+import { IAgent, IAgentExecutor } from '@/agent/type';
+import { AgentProvider } from '@/agent/agentProvider';
+import { IMessage } from '@/message/type';
 
 const CreateOrEditGroupDialog: FC<{open: boolean, group?: IGroup, agents: IAgent[], onSaved: (group: IGroup) => void, onCancel: () => void}> = ({open, group, agents, onSaved, onCancel}) => {
   const [groupName, setGroupName] = useState(group?.name);
@@ -231,13 +230,14 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
     const { t } = useTranslation('chat');
     const [currentGroup, setCurrentGroup] = useState<IGroup>();
     const [currentConversation, setCurrentConversation] = useState<IMessage[]>();
-    const [agentExecutors, setAgentExecutors] = useState<IAgentExcutor[]>([]);
+    const [agentExecutors, setAgentExecutors] = useState<IAgentExecutor[]>([]);
     const [newMessage, setNewMessage] = useState<IMessage>();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     // const [availableGroups, setAvailableGroups] = useState<IGroup[]>(groups);
     const [openCreateGroupDialog, setOpenCreateGroupDialog] = useState<boolean>(false);
     const [respondingAgentAlias, setRespondingAgentAlias] = useState<string|undefined>(undefined);
+    const [stopGenerating, setStopGenerating] = useState<boolean>(false);
 
     useEffect(() => {
       setCurrentConversation(currentGroup?.conversation);
@@ -247,23 +247,88 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
       if(newMessage){
         setCurrentConversation([...currentConversation!, newMessage]);
         storageDispatcher({type: 'updateGroup', payload: {...currentGroup!, conversation: [...currentConversation!, newMessage]}})
-        if(newMessage.from == '__user'){
-          agentExecutors.forEach(async (executor, i) => {
-            console.log('executor', executor);
-            try{
-              setRespondingAgentAlias(currentGroup?.agents[i]);
-              var response = await executor.call(newMessage);
-              if(response){
-                setNewMessage(response);
-              }
-            }
-            finally{
-              setRespondingAgentAlias(undefined);
-            }
-          })
-        }
       }
     }, [newMessage]);
+
+    const newMessageHandler = async (message: IMessage) => {
+      setNewMessage(message);
+      var currentAgents = agents.filter(agent => currentGroup?.agents.includes(agent.alias));
+      var selectedAgents: string[] = [];
+      var agentToRespondPrompt = `
+## Task
+Please choose a candidate that can best reply the message bellow
+Don't select candidate who creates the message.
+
+## Available candidates ##
+user: external user that can reply anything.
+${currentAgents.map(agent => `${agent.alias}: ${agent.description}`).join('\n')}
+##
+
+## Message created from ${message.from} ##
+${message.content}
+##
+
+If no explicit candidate is mentioned in message, choose user as candidate
+candidate choice(just name)
+`
+      for (var agent of currentAgents){
+        var agentIndex = currentAgents.findIndex(a => a.alias == agent.alias);
+        var agentExecutor = agentExecutors[agentIndex];
+        if(agentExecutor){
+          try{
+            var response = await agentExecutor.ask({from: 'system', content: agentToRespondPrompt});
+            var responseContent = response.content.toString();
+            if(responseContent.includes('user')){
+              continue;
+            }
+            else if (currentGroup?.agents.includes(responseContent)){
+              selectedAgents.push(responseContent);
+            }
+          }
+          catch(e){
+            console.log(e);
+            continue;
+          }
+        }
+      }
+      
+      if(selectedAgents.length == 0){
+        // no agent is available
+        console.log('no agent is available');
+        return;
+      }
+      else{
+        // find out the agent which appears most frequently
+        var selectedAgentAlias = selectedAgents.reduce((prev, curr) => {
+          return selectedAgents.filter(agent => agent === prev).length > selectedAgents.filter(agent => agent === curr).length ? prev : curr;
+        }
+        , selectedAgents[0]);
+
+        var selectedAgentExecutor = agentExecutors.find(agentExecutor => agentExecutor.agent.alias === selectedAgentAlias);
+
+        if(!selectedAgentExecutor){
+          console.log('agent executor not found');
+          return;
+        }
+
+        if(selectedAgentExecutor){
+          try{
+            setRespondingAgentAlias(selectedAgentAlias);
+            var response = await selectedAgentExecutor.call(message);
+            if(!stopGenerating){
+              await newMessageHandler(response);
+            }
+            else{
+              setNewMessage(response);
+            }
+          }
+          finally{
+            setRespondingAgentAlias(undefined);
+          }
+        }
+
+      }
+    }
 
     const onHandleCreateGroup = (group: IGroup) => {
       // first check if the group already exists
@@ -293,7 +358,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
       // set agents
       // if none of agents is available, alert user to add an agent first
       var _agents = group.agents.map(agent => agents.find(a => a.alias === agent));
-      var agentExecutorProviders = _agents.map(_agent => getAgentExecutorProvider(_agent!.type));
+      var agentExecutorProviders = _agents.map(_agent => AgentProvider.getProvider(_agent!));
       var agentExecutors = agentExecutorProviders.map((_agent, i) => _agent(_agents[i]!, group.conversation));
       setAgentExecutors(agentExecutors);
     };
@@ -305,13 +370,13 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
       storageDispatcher({type: 'updateGroup', payload: {...currentGroup!, conversation: newConversation}})
     }
 
-    const onResendMessage = (index: number) => {
+    const onResendMessage = async (index: number) => {
       var resendMessage = currentConversation![index];
       var newConversation = [...currentConversation!];
       newConversation.splice(index, 1);
       setCurrentConversation(newConversation);
       storageDispatcher({type: 'updateGroup', payload: {...currentGroup!, conversation: newConversation}})
-      setNewMessage(resendMessage);
+      await newMessageHandler(resendMessage);
     }
 
     return (
@@ -435,6 +500,13 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
               {`${respondingAgentAlias} is typing`}
             </SmallLabel>
             <ThreeDotBouncingLoader/>
+            <SmallTextButton
+              onClick={() => {
+                setStopGenerating(true);
+                setRespondingAgentAlias(undefined);
+              }}>
+              Stop generating
+            </SmallTextButton>
           </Stack>
           }
           
@@ -458,8 +530,8 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Di
             <ChatInput
               textareaRef={textareaRef}
               messageIsStreaming={false}
-              onSend={(message) => {
-                setNewMessage(message);
+              onSend={async (message) => {
+                await newMessageHandler(message);
               }} />
           </Box>
           }

@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { IGPT35Turbo, ITextDavinci003 } from "./GPT";
 import { TextField, Stack } from "@mui/material";
 import { EditableSavableTextField, SettingSection, SmallNumberSetting, SmallTextSetting } from "@/components/Global/EditableSavableTextField";
-import { providerType } from "@/utils/app/configPanelProvider";
 
-export const ModelConfig: providerType<IGPT35Turbo | ITextDavinci003> = (model, onModelConfigChanged) => {
+export const ModelConfig = (model: IGPT35Turbo | ITextDavinci003, onModelConfigChanged : (config: IGPT35Turbo | ITextDavinci003) => void) => {
     return (
         <>
             <SmallTextSetting name="api key" value={model.apiKey} onChange={(value) => onModelConfigChanged({ ...model, apiKey: value})}/>

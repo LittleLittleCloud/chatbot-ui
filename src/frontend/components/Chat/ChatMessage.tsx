@@ -1,4 +1,3 @@
-import { IMessage, IsUserMessage, Message } from '@/types/chat';
 import { IconEdit, IconRefresh } from '@tabler/icons-react';
 import { useTranslation } from 'next-i18next';
 import { FC, memo, useEffect, useRef, useState } from 'react';
@@ -10,11 +9,12 @@ import { MemoizedReactMarkdown } from '../Markdown/MemoizedReactMarkdown';
 import { CopyButton } from './CopyButton';
 import { Avatar, Box, IconButton, Stack, Tooltip, Typography } from '@mui/material';
 import { SmallAvatar, SmallLabel, TinyLabel } from '../Global/EditableSavableTextField';
-import { getMessageUIProvider, hasMessageUIProvider } from '@/utils/app/configPanelProvider';
-import { IAgent } from '@/types/agent';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import { IMessage, IsUserMessage } from '@/message/type';
+import { IAgent } from '@/agent/type';
+import { MessageProvider } from '@/message/messageProvider';
 
 interface Props {
   message: IMessage;
@@ -44,11 +44,11 @@ export const ChatMessage: FC<Props> = memo(
     };
 
     const MessageElement = (props: { message: IMessage, onchange: (agent: IMessage) => void}) => {
-      if(!hasMessageUIProvider(props.message.type)){
+      if(!MessageProvider.hasProvider(props.message.type)){
           return <SmallLabel>{props.message.content.toString()}</SmallLabel>
       }
 
-      return getMessageUIProvider(props.message.type)(props.message, props.onchange);
+      return MessageProvider.getConfigUIProvider(props.message.type)(props.message, props.onchange);
   }
 
     useEffect(() => {

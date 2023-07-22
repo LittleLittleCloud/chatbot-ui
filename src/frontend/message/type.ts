@@ -1,5 +1,4 @@
-import { OpenAIModel } from './openai';
-import { IRecord } from './storage';
+import { IRecord } from '@/types/storage';
 
 export interface Message {
   role: Role;

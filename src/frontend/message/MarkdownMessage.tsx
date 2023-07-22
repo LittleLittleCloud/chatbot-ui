@@ -1,20 +1,15 @@
-import { IZeroshotAgentMessage } from "@/agent/chatAgent";
 import { SmallLabel, TinyClickableLabel, TinyLabel } from "@/components/Global/EditableSavableTextField";
-import { Markdown } from "@/components/Global/Markdown";
 import { MemoizedReactMarkdown } from "@/components/Markdown/MemoizedReactMarkdown";
-import { IMessage } from "@/types/chat";
-import { providerType } from "@/utils/app/configPanelProvider";
 import { Stack, Divider } from "@mui/material";
-import error from "next/error";
 import React from "react";
-import { text } from "stream/consumers";
+import { IMessage } from "./type";
 
 export interface IMarkdownMessage extends IMessage {
     type: 'message.markdown',
     content: string,
 }
 
-export const MarkdownMessage: providerType<IMarkdownMessage> = (message, onChange) => {
+export const MarkdownMessage = (message: IMarkdownMessage, onChange: (message: IMarkdownMessage) => void) => {
     const content = message.content;
     const [openContent, setOpenContent] = React.useState<'markdown' | 'plain text'>("markdown");
     return (

@@ -1,7 +1,11 @@
-import { registerMessageUIProvider } from "@/utils/app/configPanelProvider";
 import { IMarkdownMessage, MarkdownMessage } from "./MarkdownMessage";
+import { MessageProvider } from "./messageProvider";
 
-registerMessageUIProvider<IMarkdownMessage>(
+MessageProvider.registerProvider<IMarkdownMessage>(
     "message.markdown",
-    (message, onChange) => MarkdownMessage(message, onChange)
-)
+    (message) => message,
+    (message, onChange) => MarkdownMessage(message, onChange),
+    {
+        type: "message.markdown",
+        content: "",
+    } as IMarkdownMessage);

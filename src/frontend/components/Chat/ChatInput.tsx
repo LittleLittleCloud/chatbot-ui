@@ -1,4 +1,3 @@
-import { IMessage, Message } from '@/types/chat';
 import { OpenAIModel, OpenAIModelID } from '@/types/openai';
 import { Prompt } from '@/types/prompt';
 import { IconPlayerStop, IconRepeat, IconSend } from '@tabler/icons-react';
@@ -16,9 +15,9 @@ import { PromptList } from './PromptList';
 import { VariableModal } from './VariableModal';
 import { Box, Button, ButtonGroup, Stack, TextField, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
 import { CentralBox, Label, SmallClickableLabel, SmallLabel, SmallTextButton, TinyLabel, TinyTextButton } from '../Global/EditableSavableTextField';
-import { Shadows } from '@mui/system';
 import { Markdown } from '../Global/Markdown';
 import { ChatBlobStorage, ImageBlobStorage } from '@/utils/blobStorage';
+import { IMessage } from '@/message/type';
 
 interface Props {
   messageIsStreaming: boolean;
