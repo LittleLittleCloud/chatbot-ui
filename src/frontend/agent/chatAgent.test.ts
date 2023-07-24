@@ -1,7 +1,5 @@
-import dotenv from "dotenv"
 import { ChatAgentExecutor, IChatAgent } from "./chatAgent";
 import { IGPT35Turbo } from "@/model/openai/GPT";
-import "@/utils/app/setup";
 import { IMessage } from "@/message/type";
 import { Logger } from "@/utils/logger";
 

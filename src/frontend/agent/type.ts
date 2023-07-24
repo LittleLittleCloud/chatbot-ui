@@ -12,5 +12,7 @@ export interface IAgent extends IRecord{
 export interface IAgentExecutor{
     call(messages: IMessage[], agents: IAgent[]): Promise<IMessage>;
 
-    ask(candidate_messages: IMessage[], chat_history: IMessage[]): Promise<number>;
+    ask(candidate_messages: IMessage[], chat_history: IMessage[], agent_information: IAgent[]): Promise<number>;
+
+    rolePlay(messages: IMessage[], agents: IAgent[]): Promise<number>;
 }

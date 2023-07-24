@@ -23,7 +23,7 @@ export interface ITextDavinci003 extends IOpenAIModel{
 
 export interface IGPT35Turbo extends IOpenAIModel{
     type: "openai.gpt-35-turbo";
-    model: "gpt-3.5-turbo";
+    model: "gpt-3.5-turbo" | "gpt-3.5-turbo-0613";
     isStreaming: true;
     isChatModel: true;
 }
@@ -58,7 +58,7 @@ export class GPT_35_TURBO extends ChatOpenAI{
             topP: fields.topP ?? 1,
             presencePenalty: fields.presencePenalty ?? 0,
             frequencyPenalty: fields.frequencyPenalty ?? 0,
-            stop: fields.stop ?? ["\n"],
+            stop: fields.stop ?? undefined,
             streaming: fields.isStreaming ?? false,
             openAIApiKey: fields.apiKey,
             modelName: fields.model,

@@ -71,7 +71,7 @@ export const ChatInput: FC<Props> = ({
       return;
     }
     var now = Date.now();
-    onSend({ from: '__user', content, type: 'message.markdown', timestamp: now });
+    onSend({ from: 'Avatar', content, type: 'message.markdown', timestamp: now });
     setContent('');
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {

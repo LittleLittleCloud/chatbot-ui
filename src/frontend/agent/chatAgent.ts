@@ -53,24 +53,26 @@ export class ChatAgentExecutor implements IAgentExecutor {
   renderMessage(message: IMessage): string {
     var from = message.from;
     var content = message.content;
-    var messageStr = `${from}: ${content}`;
+
+    // remove newline
+    content = content.replace(/\n/g, " ");
+    var messageStr = `[${from}]:${content}`;
     return messageStr;
   }
 
   renderChatHistoryMessages(history: IMessage[]): string {
-    var historyStr = history.map((message) => this.renderMessage(message)).join("\n");
+    var historyStr = history.map((message) => this.renderMessage(message)).join("\n\n");
     return historyStr;
   }
 
   renderCandidateMessages(candidate_messages: IMessage[]): string {
-    var candidateStr = candidate_messages.map((message, i) => `### candidate message ###
-${this.renderMessage(message)}`).join("\n");
+    var candidateStr = candidate_messages.map((message, i) => `${this.renderMessage(message)}`).join("\n");
 
     return candidateStr;
   }
 
   renderCallPrompt(messages: IMessage[]): string {
-    var namePrompt = `Your name is ${this.agent.alias}`;
+    var namePrompt = `Your name is ${this.agent.alias}, ${this.agent.description}`;
     var useMarkdownPrompt = `use markdown to format response`;
     var historyPrompt = `###chat history###
 ${this.renderChatHistoryMessages(messages)}
@@ -99,23 +101,68 @@ ${this.renderChatHistoryMessages(messages)}
     throw new Error("llm type not supported");
   }
 
-  async ask(candidate_messages: IMessage[], chat_message: IMessage[]): Promise<number> {
-    // select the best message for response
-    var prompt = `
-### chat history ###
-${this.renderChatHistoryMessages(chat_message)}
+  renderAgentInformation(agent_information: IAgent[]): string {
+    var agentStr = agent_information.map((agent) => `${agent.alias}: ${agent.description}`).join("\n");
 
-${this.renderCandidateMessages(candidate_messages)}
+    return agentStr;
+  }
 
-Choose the best response from candidate messages according to chat history
-Return the role of message only (e.g ${candidate_messages[0].from})`
+  async rolePlay(messages: IMessage[], agents: IAgent[]): Promise<number> {
+    var prompt = `### role information###
+${this.renderAgentInformation(agents)}
+### end of role information ###
+
+### conversation ###
+${this.renderChatHistoryMessages(messages)}
+### end of conversation ###
+
+You are in a multi-role play game and your task is to continue writing conversation. Carefully pick a role based on context. Put sender's name in square brackets. Explain why you pick this role.
+(e.g: [sender]: // short and precise message)`
 
     Logger.debug(`prompt: ${prompt}`);
     var response = await this.callLLM(prompt);
-
+    Logger.debug(`response from ${this.agent.alias}: ${response}`);
     try{
-      var candidate_roles = candidate_messages.map((message) => message.from);
-      var index = candidate_roles.indexOf(response);
+      var candidate_roles = agents.map((agent) => agent.alias.toLowerCase());
+      var selected_role = response.match(/\[(.*?)\]/)![1].toLowerCase();
+      var index = candidate_roles.indexOf(selected_role);
+
+      Logger.debug(`response from ${this.agent.alias}: ${selected_role}, index: ${index}`);
+      return index;
+    }
+    catch(e){
+      Logger.error(`error: ${e}`);
+      return -1;
+    }
+  }
+
+  async ask(candidate_messages: IMessage[], chat_message: IMessage[], agent_information: IAgent[]): Promise<number> {
+    // select the best message for response
+    var prompt = `
+### role information ###
+${this.renderAgentInformation(agent_information)}
+### end of role information ###
+
+### conversation ###
+${this.renderChatHistoryMessages(chat_message)}
+### end of conversation ###
+
+### candidate messages ###
+${this.renderCandidateMessages(candidate_messages)}
+### end of candidate messages ###
+
+You are in a role play game, Carefully choose a response from candidate messages to make the conversation reasonable. Put sender's name in square brackets
+(e.g: [sender]: // message)`
+
+    Logger.debug(`prompt: ${prompt}`);
+    var response = await this.callLLM(prompt);
+    Logger.debug(`response from ${this.agent.alias}: ${response}`);
+    try{
+      var candidate_roles = candidate_messages.map((message) => message.from.toLowerCase());
+      var selected_role = response.match(/\[(.*?)\]/)![1].toLowerCase();
+      var index = candidate_roles.indexOf(selected_role);
+
+      Logger.debug(`response from ${this.agent.alias}: ${selected_role}, index: ${index}`);
       return index;
     }
     catch(e){
@@ -128,6 +175,7 @@ Return the role of message only (e.g ${candidate_messages[0].from})`
     var prompt = this.renderCallPrompt(messages);
     Logger.debug(`prompt: ${prompt}`);
     var response = await this.callLLM(prompt);
+    Logger.debug(`response from ${this.agent.alias}: ${response}`);
 
     return {
       type: 'message.markdown',
