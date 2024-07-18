@@ -1,4 +1,3 @@
-import { IMessage, Message } from '@/types/chat';
 import { OpenAIModel, OpenAIModelID } from '@/types/openai';
 import { Prompt } from '@/types/prompt';
 import { IconPlayerStop, IconRepeat, IconSend } from '@tabler/icons-react';
@@ -14,18 +13,20 @@ import {
 } from 'react';
 import { PromptList } from './PromptList';
 import { VariableModal } from './VariableModal';
-import { Box, Button, TextField } from '@mui/material';
+import { Box, Button, ButtonGroup, Stack, TextField, ToggleButton, ToggleButtonGroup, Tooltip } from '@mui/material';
+import { CentralBox, Label, SmallClickableLabel, SmallLabel, SmallTextButton, TinyLabel, TinyTextButton } from '../Global/EditableSavableTextField';
+import { Markdown } from '../Global/Markdown';
+import { ChatBlobStorage, ImageBlobStorage } from '@/utils/blobStorage';
+import { IMessage } from '@/message/type';
 
 interface Props {
   messageIsStreaming: boolean;
   onSend: (message: IMessage) => void;
-  textareaRef: MutableRefObject<HTMLTextAreaElement | null>;
 }
 
 export const ChatInput: FC<Props> = ({
   messageIsStreaming,
   onSend,
-  textareaRef,
 }) => {
   const { t } = useTranslation('chat');
 
@@ -36,8 +37,11 @@ export const ChatInput: FC<Props> = ({
   const [promptInputValue, setPromptInputValue] = useState('');
   const [variables, setVariables] = useState<string[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [preview, setPreview] = useState<boolean>(false);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
 
   const promptListRef = useRef<HTMLUListElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -67,7 +71,7 @@ export const ChatInput: FC<Props> = ({
       return;
     }
     var now = Date.now();
-    onSend({ from: '__user', content, type: 'text/plain', timestamp: now });
+    onSend({ from: 'Avatar', content, type: 'message.markdown', timestamp: now });
     setContent('');
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {
@@ -148,17 +152,75 @@ export const ChatInput: FC<Props> = ({
     }
   };
 
-  const handleSubmit = (updatedVariables: string[]) => {
-    const newContent = content?.replace(/{{(.*?)}}/g, (match, variable) => {
-      const index = variables.indexOf(variable);
-      return updatedVariables[index];
-    });
+  const uploadFileHandler = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      // first, check if file is image or one of [csv, tsv, json, txt, pdf]
+      // if not, throw an alert and return
+      let allowedFileTypes = ['image', 'text'];
+      let allowedExtensions = ['csv', 'tsv', 'json', 'txt', 'pdf'];
+      let fileType = file.type.split('/')[0];
+      let fileExtension = file.name.split('.').pop();
+      if (!allowedFileTypes.includes(fileType) && !allowedExtensions.includes(fileExtension)) {
+        alert('File type not supported, please upload an image or text file');
+        return;
+      }
 
-    setContent(newContent);
+      let blobStorage = await ChatBlobStorage;
+      // update file name with timestamp
+      let fileName = `${Date.now()}-${file.name}`;
+      let blob = new Blob([e.target?.result!]);
+      await blobStorage.saveBlob(blob, fileName);
+      // insert into text value
+      setContent((prevContent) => {
+        let isImage = fileType === 'image';
+        let insertText = isImage ? `![](${fileName})` : `[${fileName}](${fileName})`;
+        // insert to text area ref. selectionstart
+        if (textareaRef && textareaRef.current) {
+          if (prevContent === undefined) {
+            return insertText;
+          }
+          
+          let textArea = textareaRef.current;
+          let startPos = textArea.selectionStart;
+          let endPos = textArea.selectionEnd;
+          let content = prevContent?.substring(0, startPos) + insertText + prevContent?.substring(endPos, prevContent.length);
+          
+          return content;
+        }
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
 
-    if (textareaRef && textareaRef.current) {
-      textareaRef.current.focus();
+  const handleUploadFile = ({target}: {target: HTMLInputElement}) => {
+    if (!target.files) {
+      return;
     }
+    const file = target.files[0];
+    uploadFileHandler(file);
+  };
+
+  const dropHandler = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      let file = e.dataTransfer.files[0];
+      uploadFileHandler(file);
+    }
+    setIsDragOver(false);
+  };
+
+  const dragEnterHandler = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const dragLeaveHandler = (e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
   };
 
   useEffect(() => {
@@ -195,35 +257,120 @@ export const ChatInput: FC<Props> = ({
   }, []);
 
   return (
-        <Box
+        <CentralBox
+          onDrop={dropHandler}
+          onDragOver={dragEnterHandler}
+          onDragLeave={dragLeaveHandler}
           sx={{
             display: 'flex',
             width: '100%',
-            flexDirection: 'row',
-            gap: 2,
+            height: '100%',
+            borderRadius: '1rem',
           }}>
-          <TextField
+          <Stack
+            direction="column"
+            width="100%"
+            height="100%"
+            spacing={0.5}>
+          {
+            isDragOver &&
+            <TinyLabel
+              sx = {{
+                color: 'text.secondary',
+              }}>
+              {t('Drop to upload')}
+            </TinyLabel>
+          }
+          {
+            !preview && 
+            <TextField
             sx = {{
               flexGrow: 1,
               '& .MuiOutlinedInput-root': {
                 borderRadius: '0.5rem',
+                fieldset: {
+                  borderColor: 'divider',
+                },
                 '&:hover fieldset': {
                   borderColor: 'primary.main',
                 },
               },
             }}
-            // ref={textareaRef}
+            inputRef={textareaRef}
             multiline={true}
-            placeholder={t('Type a message') || ''}
+            placeholder={t('Type a message, markdown is supported, attach file by drag & drop') || ''}
             onChange={handleChange}
-            value={content}
-            />
+            value={content}/>
+          }
+          {
+            preview &&
+            <Box
+              sx={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '0.5rem',
+                border: '1px solid',
+                borderColor: 'divider',
+                padding: '1rem',
+                overflow: 'scroll'
+              }}>
+              <Markdown
+                height="10%"
+              >{content ?? "nothing to preview"}</Markdown>
+            </Box>
+          }
+            <Stack
+              direction="row"
+              spacing={1}
+              width="100%">
+              <ToggleButtonGroup
+                size='small'
+                sx={{
+                  flexGrow: 1,
+                }}>
+                <ToggleButton
+                  value="Write"
+                  onClick={() => setPreview(false) }>
+                  <TinyLabel>Write</TinyLabel>
+                </ToggleButton>
+                <ToggleButton
+                  value="Preview"
+                  onClick={() => setPreview(true)}>
+                  <TinyLabel>Preview</TinyLabel>
+                </ToggleButton>
+                <ToggleButton
+                  component='label'>
+                  <Tooltip title="Upload a File, supported format: csv, txt, tsv, json, pdf">
+                    <TinyLabel>Upload a File</TinyLabel>
+                  </Tooltip>
+                  <input
+                    type="file"
+                    accept=".csv, .txt, .tsv, .json, .pdf"
+                    onChange={handleUploadFile}
+                    hidden/>
+                </ToggleButton>
+                <ToggleButton
+                  component='label'>
+                  <Tooltip title="Upload an image, supported format: png, jpg, jpeg, gif">
+                    <TinyLabel>Upload an image</TinyLabel>
+                  </Tooltip>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUploadFile}
+                    hidden/>
+                </ToggleButton>
+              </ToggleButtonGroup>
 
-          <Button
-            variant="outlined"
-            onClick={handleSend}>
-            <IconSend className="opacity-60" />
-          </Button>
-        </Box>
+              <ButtonGroup
+                size='small'>
+                <TinyTextButton
+                  onClick={handleSend}>
+                    Send
+                </TinyTextButton>
+              </ButtonGroup>
+            </Stack>
+          </Stack>
+        </CentralBox>
   );
 };

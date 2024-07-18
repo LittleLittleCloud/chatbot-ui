@@ -12,7 +12,6 @@ export function agentReducer(agents : IAgent[], action: AgentAction){
         case "remove":
             return agents.filter(a => a.alias !== action.payload.alias);
         case "update":
-            console.log(action);
             var originalAlias = action.original?.alias ?? action.payload.alias;
             return agents.map(a => a.alias === originalAlias ? action.payload : a);
         case "addOrUpdate":

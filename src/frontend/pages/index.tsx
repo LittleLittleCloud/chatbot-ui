@@ -21,7 +21,7 @@ import {
 import { saveFolders } from '@/utils/app/folders';
 import { exportData, importData } from '@/utils/app/importExport';
 import { savePrompts } from '@/utils/app/prompts';
-import { AppBar, Button, Toolbar, Typography, Box, createTheme, Divider, Stack, Tooltip, IconButton, Avatar, Menu, MenuItem, Chip } from '@mui/material';
+import { AppBar, Button, Toolbar, Typography, Box, createTheme, Divider, Stack, Tooltip, IconButton, Avatar, Menu, MenuItem, Chip, CssBaseline, FormControlLabel, Switch } from '@mui/material';
 import { IconArrowBarLeft, IconArrowBarRight } from '@tabler/icons-react';
 import { GetServerSideProps, GetStaticProps } from 'next';
 import { useTranslation } from 'next-i18next';
@@ -36,7 +36,7 @@ import { BaseLLM, LLM } from "langchain/dist/llms/base";
 import { GPT_35_TURBO, TextDavinci003 } from '@/model/azure/GPT';
 import '@/utils/app/setup';
 import { AgentPage } from '@/components/Agent/agent';
-import { IStorage } from '@/types/storage';
+import { IStorage, importZip } from '@/types/storage';
 import SettingsIcon from '@mui/icons-material/Settings';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
@@ -44,23 +44,23 @@ import { groupReducer } from '@/utils/app/groupReducer';
 import { IAgent } from '@/types/agent';
 import { agentReducer } from '@/utils/app/agentReducer';
 import getConfig from 'next/config';
+import { storageReducer } from '@/utils/app/storageReducer';
+import { Label, LargeLabel, SmallLabel } from '@/components/Global/EditableSavableTextField';
 
 const { publicRuntimeConfig } = getConfig();
 const Home: React.FC<IStorage> = () => {
   const { t } = useTranslation('chat');
   const [hasChange, setHasChange] = useState<boolean>(false);
   // STATE ----------------------------------------------
-  const [storage, setStorage] = useState<IStorage>({ groups: [], agents: [], type: 'storage' });
-  const [availableGroups, groupDispatch] = useReducer<typeof groupReducer>((group, action) =>{
-    const newGroup = groupReducer(group, action);
+  const [storage, storageDispatcher] = useReducer<typeof storageReducer>((storage, action) => {
+    const newStorage = storageReducer(storage, action);
     setHasChange(true);
-    return newGroup;
-  }, storage.groups);
-  const [availableAgents, agentDispatcher] = useReducer<typeof agentReducer>((agents, action) => {
-    const newAgents = agentReducer(agents, action);
-    setHasChange(true);
-    return newAgents;
-  }, storage.agents);
+    return newStorage;
+  }, {type: 'storage', agents: [], groups: []} as IStorage);
+
+  const availableGroups = storage.groups;
+  const availableAgents = storage.agents;
+  
   const [lightMode, setLightMode] = useState<'dark' | 'light'>('dark');
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
@@ -87,11 +87,13 @@ const Home: React.FC<IStorage> = () => {
     if(isInit) return;
     const storage = localStorage.getItem('storage');
     if (storage) {
-      setStorage(JSON.parse(storage));
+      console.log('load from storage');
+      storageDispatcher({ type: 'set', payload: JSON.parse(storage) });
     }
     setIsInit(false);
     console.log('init');
   }, []);
+
   // BASIC HANDLERS --------------------------------------------
 
   const handleLightMode = (mode: 'dark' | 'light') => {
@@ -100,30 +102,24 @@ const Home: React.FC<IStorage> = () => {
   };
 
   const handleExportSettings = () => {
-    exportData(storage)
-    setIsMenuOpen(false);
+    exportData(storage).finally(() => {
+      setIsMenuOpen(false);
+    });
   };
 
   const handleImportSettings = ({ target }: {target: HTMLInputElement}) => {
     if (!target.files?.length) return;
     const file = target.files[0];
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const data: IStorage = JSON.parse(event.target?.result as string);
-      // load agents
-      data.agents.forEach((agent) => {
-        agentDispatcher({ type: 'addOrUpdate', payload: agent });
-      });
+    reader.onload = async (event) => {
 
-      // load groups
-      data.groups.forEach((group) => {
-        groupDispatch({ type: 'addOrUpdate', payload: group });
-      });
-
+      const data: IStorage = await importZip(new Blob([event.target?.result!]));
+      console.log(data);
+      storageDispatcher({ type: 'set', payload: data });
       setIsMenuOpen(false);
     };
 
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
 
   useEffect(() => {
@@ -135,66 +131,90 @@ const Home: React.FC<IStorage> = () => {
     }
   }, [isSaving]);
 
-  useEffect(() => {
-    setStorage({ groups: availableGroups, agents: availableAgents, type: 'storage' });
-  }, [availableGroups, availableAgents]);
-
   const tabs = ['Chat', 'Agent']
   const settings = ['Import', 'Export'];
   const [selectedTab, setSelectedTab] = useState(tabs[0]);
-  const theme = createTheme({
+  const darkTheme = createTheme({
     palette: {
       mode: 'dark',
+      background: {
+        secondary: '#1E1E1E',
+        default: '#121212', 
+        paper: '#1E1E1E'
+      }
+    },
+  });
+
+  const lightTheme = createTheme({
+    palette: {
+      mode: 'light',
+      background: {
+        secondary: '#F5F5F5',
+        default: '#FFFFFF', 
+        paper: '#FFFFFF'
+      }
     },
   });
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={lightMode == "light" ? lightTheme : darkTheme }>
       <Head>
         <title>Chatbot UI</title>
-        <meta
-          name="viewport"
-          content="height=device-height ,width=device-width, initial-scale=1, user-scalable=no"
-        />
         <link rel="icon" href="/favicon.ico" />
       </Head>
-      
-      <main
-          className={`text-sm text-white dark:text-white ${lightMode}`}
-        >
+      <CssBaseline />
       <Box
         sx={{
           display: 'flex',
           flexDirection: "column",
           width: "100%",
-          height: "100vh",
-          maxHeight: "100vh"}}>
-        <Box
-          sx={{
-            Height: "10%",
-          }}>
-          <AppBar position='static' >
+          height: "100vh"}}>
+          <AppBar
+            position='static'
+            sx={{
+              flexGrow: 1,
+            }}>
           <Toolbar variant="regular">
             <Stack
               direction="row"
               spacing={2}
               sx={{
                 flexGrow: 1,
+                alignItems: "baseline",
               }}>
-              <Typography
-                variant="h6"
-                component="div">
+              <LargeLabel>
                 LLM Chat
-              </Typography>
-              <Chip
-                size='medium'
-                label={`${publicRuntimeConfig.version}`} />
+              </LargeLabel>
+              
+              <SmallLabel>
+                {`${publicRuntimeConfig.version}`}
+              </SmallLabel>
             </Stack>
             <Stack direction="row" spacing={2}>
               {hasChange && <Button variant='outlined' onClick={() => setIsSaving(true)}>save</Button>}
+              <FormControlLabel
+                value="start"
+                control={
+                  <Switch
+                    color="default"
+                    checked={lightMode === 'light'}
+                    onChange={() => handleLightMode(lightMode === 'light' ? 'dark' : 'light')} />
+                }
+                label={
+                  <SmallLabel>
+                    {lightMode === 'light' ? 'Light' : 'Dark'}
+                  </SmallLabel>
+                }
+                labelPlacement="start"
+              />
               {
                 tabs.map((tab, i) => {
                   return (
-                    <Button key={i} sx={{ color: '#fff' }} onClick={() => setSelectedTab(tab)} >{tab}</Button>
+                    <Button
+                      key={i}
+                      sx={{ color: '#fff' }}
+                      onClick={() => setSelectedTab(tab)}>
+                      <SmallLabel>{tab}</SmallLabel>
+                    </Button>
                   )
                 })
               }
@@ -242,28 +262,26 @@ const Home: React.FC<IStorage> = () => {
             </Stack>
             </Toolbar>
           </AppBar>
-        </Box>
       <Box
         sx={{
-          flexGrow: 1,
-          height: "90%",
+          weight: '100%',
+          height: '92%',
         }}>
         {selectedTab == 'Chat' && 
           <Chat
             groups={availableGroups}
             agents={availableAgents}
-            groupDispatch={groupDispatch}
+            storageDispatcher={storageDispatcher}
           />
         }
         {selectedTab == 'Agent' && (
           <AgentPage
             availableAgents={availableAgents}
-            agentDispatcher={agentDispatcher}
+            storageDispatcher={storageDispatcher}
             />
         )}
       </Box>
       </Box>
-      </main>
       </ThemeProvider>
   );
 };

@@ -1,12 +1,16 @@
-import { registerAgentExecutorProvider } from "@/utils/app/agentProvider";
-import { IZeroshotAgent, initializeZeroshotAgentExecutor } from "./zeroshotAgent";
-import { registerAgentConfigPannelProvider } from "@/utils/app/agentConfigPannelProvider";
-import { ZeroshotAgentConfigPanel } from "./zeroshotAgentConfigPanel";
+import { IChatAgent, IZeroshotAgentMessage, initializeChatAgentExecutor } from "./chatAgent";
+import { ChatAgentConfigPanel, MarkdownMessage } from "./chatAgentConfigPanel";
+import { AgentProvider } from "./agentProvider";
 
-registerAgentExecutorProvider<IZeroshotAgent>(
+AgentProvider.registerProvider(
             "agent.chat",
-            (agent: IZeroshotAgent, history) => { return initializeZeroshotAgentExecutor(agent, history);});
-
-registerAgentConfigPannelProvider<IZeroshotAgent>(
-            "agent.chat",
-            (agent, onConfigChange) => ZeroshotAgentConfigPanel(agent, onConfigChange));
+            (agent) => initializeChatAgentExecutor(agent as IChatAgent),
+            (agent, onConfigChange) => ChatAgentConfigPanel(agent as IChatAgent, onConfigChange),
+            {
+                type: "agent.chat",
+                prefixPrompt: "you are a chatbot in a chat room. Try to be helpful and friendly.",
+                suffixPrompt: `Your response:`,
+                useMarkdown: true,
+                includeHistory: true,
+                includeName: true,
+            } as IChatAgent);

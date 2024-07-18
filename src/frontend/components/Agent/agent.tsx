@@ -10,20 +10,20 @@ import {
   } from 'react';
 
 import { Box, Container, List, ListItem, Stack, Typography, Avatar, Button, ListItemButton, ListItemIcon, ListItemText, Divider, TextField, Tab, Tabs, DialogTitle, Dialog, DialogActions, DialogContent, DialogContentText, ListItemAvatar, IconButton, Menu, MenuItem } from '@mui/material';
-import { configPanelProviderType, getAgentConfigPannelProvider, getAvailableAgents, hasAgentConfigPannelProvider } from '@/utils/app/agentConfigPannelProvider';
-import { IAgent } from '@/types/agent';
-import { CentralBox, EditableSavableTextField, EditableSelectField, SmallSelectField, SmallTextField } from '../Global/EditableSavableTextField';
+import { CentralBox, EditableSavableTextField, EditableSelectField, LargeAvatar, SelectableListItem, SettingSection, SmallAvatar, SmallLabel, SmallSelectField, SmallSelectSetting, SmallTextField, SmallTextSetting, TinyAvatar } from '../Global/EditableSavableTextField';
 import { TabContext, TabPanel } from '@mui/lab';
 import { ReactElement } from 'react-markdown/lib/react-markdown';
-import { hasAgentExecutorProvider } from '@/utils/app/agentProvider';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
-import { AgentAction } from '@/utils/app/agentReducer';
+import { StorageAction } from '@/utils/app/storageReducer';
+import { ImageBlobStorage } from '@/utils/blobStorage';
+import { AgentProvider } from '@/agent/agentProvider';
+import { IAgent } from '@/agent/type';
 
-const CreateAgentDialog = (props: {open: boolean, onClose: () => void, agentDispatcher: Dispatch<AgentAction>}) => {
+const CreateAgentDialog = (props: {open: boolean, onClose: () => void, storageDispatcher: Dispatch<StorageAction>}) => {
     const [alias, setAlias] = useState("");
     const [agentID, setAgentID] = useState<string | null>(null);
-    const availableAgents = getAvailableAgents();
+    const availableAgents = AgentProvider.getAvailableModels();
     const [isSavable, setIsSavable] = useState(false);
 
     useEffect(() => {
@@ -32,7 +32,8 @@ const CreateAgentDialog = (props: {open: boolean, onClose: () => void, agentDisp
 
     const onAgentCreatedHandler = (agent: IAgent) => {
         try{
-            props.agentDispatcher({type: 'add', payload: agent});
+            props.storageDispatcher({type: 'addAgent', payload: agent});
+            props.onClose();
         }
         catch(err){
             alert(err);
@@ -68,13 +69,13 @@ const CreateAgentDialog = (props: {open: boolean, onClose: () => void, agentDisp
                 <Button onClick={props.onClose}>Cancel</Button>
                 <Button
                     disabled={!isSavable}
-                    onClick={() => onAgentCreatedHandler({type: agentID!, alias: alias, description: '', avatar: alias})}>Create</Button>
+                    onClick={() => onAgentCreatedHandler({...AgentProvider.getDefaultValue(agentID!), alias: alias})}>Create</Button>
             </DialogActions>
         </Dialog>
     );
 }
 
-export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch<AgentAction>}> = ({availableAgents, agentDispatcher}) => {
+export const AgentPage: FC<{availableAgents: IAgent[], storageDispatcher: Dispatch<StorageAction>}> = ({availableAgents, storageDispatcher}) => {
     const [selectedAgent, setSelectedAgent] = useState<IAgent>();
     const [tab, setTab] = useState("1");
     const [onOpenCreateAgentDialog, setOpenCreateAgentDialog] = useState(false);
@@ -82,32 +83,58 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const open = Boolean(anchorEl);
     const [agentToDelete, setAgentToDelete] = useState<IAgent | null>(null);
+    const registeredAgents = AgentProvider.getAvailableModels();
 
-    const registeredAgents = getAvailableAgents();
     const handleClose = () => {
         setAnchorEl(null);
       };
 
     const AgentAdvancedSettingPanel = (props: { agent: IAgent, onchange: (agent: IAgent) => void}) => {
-        if(!hasAgentConfigPannelProvider(props.agent.type)){
+        if(!AgentProvider.hasProvider(props.agent.type)){
             return <Typography>Not implemented</Typography>
         }
 
-        return getAgentConfigPannelProvider(props.agent.type)(props.agent, props.onchange);
+        return AgentProvider.getConfigUIProvider(props.agent.type)(props.agent, props.onchange);
     }
 
     const onCloseSettingMenu = () => {
         setOpenSettingMenu(-1);
         setAnchorEl(null);
     }
+
     const onAgentDeletedHandler = (agent: IAgent) => {
-        agentDispatcher({type: 'remove', payload: agent});
+        storageDispatcher({type: 'removeAgent', payload: agent});
+        if(selectedAgent?.alias == agent.alias){
+            setSelectedAgent(undefined);
+        }
         setAgentToDelete(null);
         onCloseSettingMenu();
     };
 
+    const onAvatarUploadedHandler = ({ target }: {target: HTMLInputElement}) => {
+        console.log("upload avatar");
+        // read file
+        // set avatar
+        if(target.files == null || target.files.length == 0){
+            return;
+        }
+
+        const file = target.files[0];
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const data = e.target?.result;
+            var blob = new Blob([data!]);
+            var blobStorage = await ImageBlobStorage;
+            await blobStorage.saveBlob(blob, file.name);
+            storageDispatcher({type: 'updateAgent', payload: {...selectedAgent!, avatar: file.name}, original: selectedAgent});
+            setSelectedAgent({...selectedAgent!, avatar: file.name});
+        }
+
+        reader.readAsArrayBuffer(file);
+    };
+
     const onAgentUpdatedHandler = (agent: IAgent, original?: IAgent) => {
-        agentDispatcher({type: 'update', payload: agent, original: original});
+        storageDispatcher({type: 'updateAgent', payload: agent, original: original ?? selectedAgent});
         setSelectedAgent(agent);
     };
 
@@ -115,7 +142,7 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
         // deep copy
         var clonedAgent = JSON.parse(JSON.stringify(agent)) as IAgent;
         clonedAgent.alias = clonedAgent.alias + " (clone)";
-        agentDispatcher({type: 'add', payload: clonedAgent});
+        storageDispatcher({type: 'addAgent', payload: clonedAgent});
         onCloseSettingMenu();
     };
 
@@ -130,7 +157,7 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
                 overflow: "scroll",
             }}>
             <CreateAgentDialog
-                agentDispatcher={agentDispatcher}
+                storageDispatcher={storageDispatcher}
                 open={onOpenCreateAgentDialog}
                 onClose={() => setOpenCreateAgentDialog(false)} />
                     
@@ -189,30 +216,49 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
                 }}>
             <List>
                 {availableAgents.map((agent, index) => 
-                    <ListItem
+                    <SelectableListItem
+                        selected={selectedAgent?.alias == agent.alias}
                         key={index}
-                        onClick={() => setSelectedAgent(availableAgents[index])}
-                        secondaryAction = {
-                            <IconButton
-                                onClick={(e) =>
-                                {
-                                    setOpenSettingMenu(index);
-                                    setAnchorEl(e.currentTarget);
-                                    e.stopPropagation();
-                                }}
-                                className='hover-button' >
-                                <MoreVertIcon />
-                            </IconButton>
-                        }>
-                        <ListItemButton>
-                            <ListItemAvatar>
-                                <Avatar>{agent.avatar}</Avatar>
-                            </ListItemAvatar>
-                            <ListItemText>
-                                <Typography>{agent.alias}</Typography>
-                            </ListItemText>
-                        </ListItemButton>
-                    </ListItem>
+                        onClick={() => setSelectedAgent(availableAgents[index])}>
+                        <Stack
+                            direction="row"
+                            spacing={2}
+                            sx={{
+                                width: "100%",
+                            }}>
+                            <Box
+                                sx={{
+                                    width: "40%",
+                                    display: "flex",
+                                }}>
+                                <SmallAvatar
+                                    avatarKey={agent.avatar} />
+                            </Box>
+                            <Box
+                                sx={{
+                                    width: "50%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                }}>
+                                <SmallLabel>{agent.alias}</SmallLabel>
+                            </Box>
+                            <CentralBox
+                                sx={{
+                                width: '10%'
+                                }}>
+                                <IconButton
+                                    onClick={(e) =>
+                                    {
+                                        setOpenSettingMenu(index);
+                                        setAnchorEl(e.currentTarget);
+                                        e.stopPropagation();
+                                    }}
+                                    className='hover-button' >
+                                    <MoreVertIcon />
+                                </IconButton>
+                            </CentralBox>
+                        </Stack>
+                    </SelectableListItem>
                 )}
             </List>
             </Box>
@@ -241,20 +287,67 @@ export const AgentPage: FC<{availableAgents: IAgent[], agentDispatcher: Dispatch
                     overflow: "scroll",
                 }}>
                     <TabContext value={tab}>
-                    <Tabs onChange={(e, v) =>setTab(v)} >
-                        <Tab label="General Setting" value="1" />
-                        <Tab label="Advanced Setting" value="2" />
-                        <Tab label="Try it out" value="3" />
+                    <Tabs
+                        value={tab}
+                        onChange={(e, v) =>setTab(v)}>
+                        <Tab label="Basic info" value="1" />
+                        <Tab label={`setting: ${selectedAgent.type}`} value="2" />
                     </Tabs>
                     <TabPanel value="1">
                         <Stack
-                            spacing={2}>
-                            <EditableSavableTextField name='alias' value={selectedAgent.alias} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, alias: value}, selectedAgent)}/>
-                            <EditableSelectField name='agent type' options={registeredAgents} value={selectedAgent.type} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, type: value!})}/>
+                            direction="column"
+                            spacing={4}
+                            sx={{
+                                height: "100%",
+                                overflow: "scroll",
+                            }}>
+                        <SettingSection
+                            toolTip="basic setting">
+                            <Stack
+                                direction="row"
+                                sx={{
+                                    width: "100%",
+                                }} >
+                                <Stack
+                                    width="70%"
+                                    direction="column"
+                                    spacing={2}>
+                                    <SmallTextSetting name="alias" toolTip='The name of the agent' value={selectedAgent.alias} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, alias: value!}, selectedAgent)} />
+                                    <SmallTextSetting name="description" toolTip='The description of the agent' value={selectedAgent.description} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, description: value!}, selectedAgent)} />
+                                    <SmallSelectSetting name='agent type' toolTip='the type of agent' options={registeredAgents} value={selectedAgent.type} onChange={(value) => onAgentUpdatedHandler({...selectedAgent, type: value!}, selectedAgent)}/>
+                                </Stack>
+                                <CentralBox
+                                    sx ={{
+                                        width: "30%",
+                                        flexDirection: "column",
+                                    }}>
+                                    <LargeAvatar
+                                        avatarKey={selectedAgent.avatar}/>
+                                    <Button
+                                        component='label'>
+                                        upload
+                                        <input
+                                        accept="image/*"
+                                        type="file"
+                                        hidden
+                                        onChange={(e) => onAvatarUploadedHandler(e)}/>
+                                    </Button>
+                                </CentralBox>
+                            </Stack>
+                            
+                        </SettingSection>
                         </Stack>
                     </TabPanel>
                     <TabPanel value="2">
+                        <Stack
+                            direction="column"
+                            spacing={4}
+                            sx={{
+                                height: "100%",
+                                overflow: "scroll",
+                            }}>
                         <AgentAdvancedSettingPanel agent={selectedAgent} onchange={(value) => onAgentUpdatedHandler(value, selectedAgent)}  />
+                        </Stack>
                     </TabPanel>
                     <TabPanel value="3">
                         <Typography>Try it out</Typography>

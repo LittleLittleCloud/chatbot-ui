@@ -2,6 +2,7 @@
     "extends" : "./tsconfig.json",
     "compilerOptions": {
         "isolatedModules": false,
+        "jsx": "react-jsx",
     },
     "exclude": ["node_modules"]
 }

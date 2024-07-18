@@ -1,4 +1,3 @@
-import { IMessage, Message } from '@/types/chat';
 import { KeyValuePair } from '@/types/data';
 import { ErrorMessage } from '@/types/error';
 import { OpenAIModel } from '@/types/openai';
@@ -17,25 +16,29 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Spinner } from '../Global/Spinner';
+import { Spinner, ThreeDotBouncingLoader } from '../Global/Spinner';
 import { ChatInput } from './ChatInput';
 import { ChatLoader } from './ChatLoader';
 import { ChatMessage } from './ChatMessage';
 import { ErrorMessageDiv } from './ErrorMessageDiv';
 import { ModelSelect } from './ModelSelect';
 import { SystemPrompt } from './SystemPrompt';
-import { Alert, Avatar, Box, Button, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, List, ListItem, Menu, MenuItem, Paper, Stack, Typography } from '@mui/material';
-import { IAgent } from '@/types/agent';
+import { Alert, Avatar, Box, Button, Container, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, IconButton, List, ListItem, ListItemButton, ListItemAvatar, ListItemText, Menu, MenuItem, Paper, Stack, Typography, AvatarGroup } from '@mui/material';
 import { AgentExecutor } from 'langchain/agents';
-import { getAgentExecutorProvider } from '@/utils/app/agentProvider';
 import { IRecord } from '@/types/storage';
-import { CentralBox, EditableSavableTextField, EditableSelectField, SmallMultipleSelectField, SmallSelectField, SmallTextField } from '../Global/EditableSavableTextField';
-import { getAvailableAgents } from '@/utils/app/agentConfigPannelProvider';
+import { CentralBox, EditableSavableTextField, EditableSelectField, LargeLabel, SelectableListItem, SmallAvatar, SmallLabel, SmallMultipleSelectField, SmallSelectField, SmallTextButton, SmallTextField, TinyAvatar } from '../Global/EditableSavableTextField';
 import SettingsIcon from '@mui/icons-material/Settings';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DeleteConfirmationDialog } from '../Global/DeleteConfirmationDialog';
 import { GroupAction, GroupCmd, groupReducer } from '@/utils/app/groupReducer';
 import { IGroup } from '@/types/group';
+import { Console, groupEnd } from 'console';
+import { StorageAction } from '@/utils/app/storageReducer';
+import { IAgent, IAgentExecutor } from '@/agent/type';
+import { AgentProvider } from '@/agent/agentProvider';
+import { IMessage, IsUserMessage } from '@/message/type';
+import { MultiAgentGroup } from '@/chat/group';
+import { Logger } from '@/utils/logger';
 
 const CreateOrEditGroupDialog: FC<{open: boolean, group?: IGroup, agents: IAgent[], onSaved: (group: IGroup) => void, onCancel: () => void}> = ({open, group, agents, onSaved, onCancel}) => {
   const [groupName, setGroupName] = useState(group?.name);
@@ -80,11 +83,12 @@ const CreateOrEditGroupDialog: FC<{open: boolean, group?: IGroup, agents: IAgent
     </Dialog>);
 };
 
-const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (group: IGroup) => void, groupDispatch: Dispatch<GroupAction>}> = ({groups, agents, onGroupSelected, groupDispatch}) => {
+const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (group?: IGroup) => void, storageDispatcher: Dispatch<StorageAction>}> = ({groups, agents, onGroupSelected, storageDispatcher}) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [groupToDelete, setGroupToDelete] = useState<IGroup | null>(null);
   const [groupToEdit, setGroupToEdit] = useState<IGroup>();
-  const [openUpdateGroupDialog, setOpenUpdateGroupDialog] = useState<boolean>(false); // [agentId
+  const [openUpdateGroupDialog, setOpenUpdateGroupDialog] = useState<boolean>(false);
+  const [selectedGroup, setSelectedGroup] = useState<IGroup | undefined>(undefined);
   const open = Boolean(anchorEl);
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -93,6 +97,12 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+  const handleGroupSelected = (group?: IGroup) => {
+    setSelectedGroup(group);
+    onGroupSelected(group);
+  }
+  
   const onClickDeleteGroup = (group: IGroup) => {
     handleClose();
     console.log('delete group', group);
@@ -106,14 +116,21 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
   }
 
   const onConfirmDeleteGroup = () => {
-    groupDispatch({type: 'remove', payload: groupToDelete!});
+    storageDispatcher({type: 'removeGroup', payload: groupToDelete!});
+    if(selectedGroup?.name == groupToDelete?.name){
+      handleGroupSelected(undefined);
+    }
     setGroupToDelete(null);
   }
 
   const onEditGroupHandler = (group: IGroup) => {
     handleClose();
     setOpenUpdateGroupDialog(false);
-    groupDispatch({type: 'update', payload: group, original: groupToEdit!});
+    storageDispatcher({type: 'updateGroup', payload: group, original: groupToEdit!});
+
+    if(selectedGroup?.name == group.name){
+      handleGroupSelected(group);
+    }
   }
 
   const onCancelDeleteGroup = () => {
@@ -121,7 +138,10 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
   }
 
   return (
-    <>
+    <Box
+      sx={{
+        width: '100%',
+      }}>
     <DeleteConfirmationDialog
       open={groupToDelete != null}
       message="Are you sure to delete this group?"
@@ -148,56 +168,76 @@ const GroupPanel: FC<{groups: IGroup[], agents: IAgent[], onGroupSelected: (grou
     </Menu>
     <List>
       {groups.map((group, index) => (
-        <ListItem
+        <SelectableListItem
+          selected={selectedGroup?.name == group.name}
           key={index}
-          onClick={() => onGroupSelected(group)}
-          sx={{
-            "& .hidden-button": {
-              display: "flex",
-            },
-            "&:hover .hidden-button": {
-              display: "flex",
-            },
-          }}>
-            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ width: '100%' }}>
-              <Avatar>{group.name[0]}</Avatar>
-              <Typography variant="h6">
-                {group.name}
-              </Typography>
-              <IconButton
-                id={`hidden-button`}
-                onClick={(e) => {
-                  setGroupToEdit(group);
-                  handleClick(e);
+          onClick={() => handleGroupSelected(group)}>
+          
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              width: '100%',
+            }}>
+            <Box
+              sx={{
+                display: 'flex',
+                width: '40%',
+              }}>
+              <AvatarGroup
+                spacing="small"
+                max={0}
+                total = {group.agents.length}>
+                {group.agents.map((agentId, index) => (
+                  <TinyAvatar key={index} avatarKey={agents[index].avatar} />
+                ))}
+              </AvatarGroup>
+            </Box>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                flexGrow: 1,
+              }}>
+              <SmallLabel>{group.name}</SmallLabel>
+            </Box>
+            <CentralBox
+                  sx={{
+                    width: '10%'
+                  }}>
+            <IconButton
+                onClick={(e) =>
+                {
+                    setGroupToEdit(group)
+                    handleClick(e)
                 }}
-                color="primary"
-                className="hidden-button"
-                aria-haspopup="true">
-                <MoreVertIcon fontSize='small'/>
-              </IconButton>
-            </Stack>
-        </ListItem>
+                className='hover-button' >
+                <MoreVertIcon />
+            </IconButton>
+            </CentralBox>
+          </Stack>
+        </SelectableListItem>
       ))}
     </List>
-    </>
+    </Box>
   )
 }
 
-export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispatch<GroupAction>}> =
+export const Chat: FC<{groups: IGroup[], agents: IAgent[], storageDispatcher: Dispatch<StorageAction>}> =
   ({
     groups,
     agents,
-    groupDispatch,
+    storageDispatcher,
   }) => {
     const { t } = useTranslation('chat');
     const [currentGroup, setCurrentGroup] = useState<IGroup>();
     const [currentConversation, setCurrentConversation] = useState<IMessage[]>();
-    const [agentExecutors, setAgentExecutors] = useState<AgentExecutor[]>([]);
     const [newMessage, setNewMessage] = useState<IMessage>();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     // const [availableGroups, setAvailableGroups] = useState<IGroup[]>(groups);
     const [openCreateGroupDialog, setOpenCreateGroupDialog] = useState<boolean>(false);
+    const [respondingAgentAlias, setRespondingAgentAlias] = useState<string|undefined>(undefined);
 
     useEffect(() => {
       setCurrentConversation(currentGroup?.conversation);
@@ -205,26 +245,40 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
 
     useEffect(() => {
       if(newMessage){
-        setCurrentConversation([...currentConversation!, newMessage]);
-        groupDispatch({type: 'update', payload: {...currentGroup!, conversation: [...currentConversation!, newMessage]}})
-        if(newMessage.from == '__user'){
-          agentExecutors.forEach(async (executor, i) => {
-            var response = await executor.call({'from': newMessage.from, 'content': newMessage.content});
-              var content = response['output'];
-              if(content?.length > 0){
-                var currentTimestamp = Date.now();
-                var responseMessage: IMessage = { from: currentGroup?.agents[i]!, type: 'text/plain', content: content, timestamp: currentTimestamp};
-                setNewMessage(responseMessage);
-              }
-          })
-        }
+        var newConversation = [...currentConversation!, newMessage];
+        // setCurrentConversation([...currentConversation!, newMessage]);
+        storageDispatcher({type: 'updateGroup', payload: {...currentGroup!, conversation: newConversation}})
       }
     }, [newMessage]);
+
+    const newMessageHandler = async (message: IMessage, round: number = 5) => {
+      setNewMessage(message);
+      if(round == 0){
+        return;
+      }
+      round -= 1;
+      var currentAgents = agents.filter(agent => currentGroup?.agents.includes(agent.alias));
+      var chat = new MultiAgentGroup(currentAgents, currentConversation!);
+      var rolePlay = await chat.rolePlay(message);
+      if (rolePlay.alias == "Avatar"){
+        return;
+      }
+      try{
+        setRespondingAgentAlias(rolePlay.alias);
+        var agentExecutor = AgentProvider.getProvider(rolePlay)(rolePlay);
+        var response = await agentExecutor.call(currentConversation!, currentAgents);
+        setRespondingAgentAlias(undefined);
+        await newMessageHandler(response, round);
+      }
+      catch(e){
+        setRespondingAgentAlias(undefined);
+      }
+    }
 
     const onHandleCreateGroup = (group: IGroup) => {
       // first check if the group already exists
       try{
-        groupDispatch({type: 'add', payload: group});
+        storageDispatcher({type: 'addGroup', payload: group});
       }
       catch(e){
         alert(e);
@@ -234,24 +288,36 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
       setOpenCreateGroupDialog(false);
     }
 
-    const onHandleSelectGroup = (group: IGroup) => {
+    const onHandleSelectGroup = (group?: IGroup) => {
+      if(group == undefined){
+        setCurrentGroup(undefined);
+        setCurrentConversation(undefined);
+
+        return;
+      }
       group.agents = group.agents.filter(agent => agents.find(a => a.alias === agent));
       setCurrentGroup(group);
       setCurrentConversation(group.conversation);
-
-      // set agents
-      // if none of agents is available, alert user to add an agent first
-      var _agents = group.agents.map(agent => agents.find(a => a.alias === agent));
-      var agentExecutorProviders = _agents.map(_agent => getAgentExecutorProvider(_agent!.type));
-      var agentExecutors = agentExecutorProviders.map((_agents, i) => _agents(agents[i]!, group.conversation));
-      setAgentExecutors(agentExecutors);
     };
+
+    const onDeleteMessage = (index: number) => {
+      currentConversation!.splice(index, 1);
+      setCurrentConversation(currentConversation!);
+      storageDispatcher({type: 'updateGroup', payload: {...currentGroup!, conversation: currentConversation!}})
+    }
+
+    const onResendMessage = async (index: number) => {
+      var resendMessage = currentConversation![index];
+      currentConversation!.splice(index, 1);
+      setCurrentConversation(currentConversation!);
+      storageDispatcher({type: 'updateGroup', payload: {...currentGroup!, conversation: currentConversation!}})
+      await newMessageHandler(resendMessage);
+    }
 
     return (
       <Box
         sx={{
           display: "flex",
-          flexDirection: "row",
           width: "100%",
           height: "100%",
           backgroundColor: "background.default",
@@ -263,7 +329,7 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
                 height: "100%",
               }}>
                 {agents?.length == 0 &&
-                <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>No agent available, create agent first</Typography>
+                <LargeLabel>No agent available, create agent first please</LargeLabel>
                 }
                 {agents && agents.length > 0 &&
                 <>
@@ -290,22 +356,22 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
           <>
           <Box
           sx={{
+            flexDirection: "column",
+            display: "flex",
             width: "20%",
             height: "100%",
           }}>
           <Box
             sx={{
-              height: "90%",
-              overflow: "auto",
+              flexGrow: 1,
             }}>
           <GroupPanel
             groups={groups}
             agents={agents}
             onGroupSelected={onHandleSelectGroup}
-            groupDispatch={groupDispatch}/>
+            storageDispatcher={storageDispatcher}/>
             </Box>
             <Box
-
               sx={{
                 height: "10%",
                 display: "flex",
@@ -321,18 +387,17 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
         <Box
           sx={{
             display: "flex",
-            flexGrow: 1,
-            maxWidth: "80%",
             height: "100%",
+            flexGrow: 1,
+            marginLeft: 5,
             flexDirection: "column",
           }}>
-          { currentConversation && agentExecutors && agentExecutors.length > 0 &&
+          { currentConversation &&
             <List
               sx={{
                 flexGrow: 1,
-                maxHeight: "100%",
+                height: "100%",
                 overflow: "auto",
-                height: "80%",
               }}>
 
             {currentConversation.map((message, index) => (
@@ -341,11 +406,13 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
                 sx={{
                   marginTop: 2,
                   marginRight: 5,
-                  marginLeft: 5,
                 }}>
                 <ChatMessage
                   key={index}
                   message={message}
+                  agent={agents.find(agent => agent.alias === message.from)}
+                  onDeleteMessage={(message) => onDeleteMessage(index)}
+                  onResendMessage={(message) => onResendMessage(index)}
                   />
                 </Box>
             ))}
@@ -353,6 +420,24 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
               ref={messagesEndRef} />
             </List>
           }
+          {respondingAgentAlias &&
+          <Stack
+            spacing={1}
+            direction="row"
+            sx={{
+              height: "5%",
+            }}>
+            <SmallLabel
+              color='text.secondary'
+              sx = {{
+                fontStyle: "italic",
+              }}>
+              {`${respondingAgentAlias} is typing`}
+            </SmallLabel>
+            <ThreeDotBouncingLoader/>
+          </Stack>
+          }
+          
           {currentGroup && currentGroup.agents.length == 0 && 
           <CentralBox
             sx={{
@@ -363,16 +448,18 @@ export const Chat: FC<{groups: IGroup[], agents: IAgent[], groupDispatch: Dispat
           </CentralBox>
             }
           
-          {currentGroup && agentExecutors && agentExecutors.length > 0 &&
+          {currentGroup &&
           <Box
             sx={{
-              padding: 5,
+              maxHeight: "50%",
+              marginBottom: 2,
+              marginRight: 5,
             }}>
             <ChatInput
               textareaRef={textareaRef}
               messageIsStreaming={false}
-              onSend={(message) => {
-                setNewMessage(message);
+              onSend={async (message) => {
+                await newMessageHandler(message);
               }} />
           </Box>
           }

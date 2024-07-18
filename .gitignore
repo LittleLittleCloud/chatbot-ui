@@ -48,3 +48,5 @@ next-env.d.ts
 **/bin/
 **/obj/
 _site
+
+.env

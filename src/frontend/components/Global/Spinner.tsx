@@ -1,3 +1,5 @@
+import styled from '@emotion/styled';
+import { Box, Stack } from '@mui/material';
 import { FC } from 'react';
 
 interface Props {
@@ -30,3 +32,36 @@ export const Spinner: FC<Props> = ({ size = '1em', className="" }) => {
     </svg>
   );
 };
+
+export const ThreeDotBouncingLoader: FC<Props> = ({ size = '1em', className="" }) => {
+  return (
+    <Stack
+      direction="row"
+      spacing={0.5}>
+      <BouncingLoader />
+      <BouncingLoader style={{ animationDelay: '0.1s' }} />
+      <BouncingLoader style={{ animationDelay: '0.2s' }} />
+    </Stack>
+  );
+};
+
+export const BouncingLoader = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  animation: `bouncing-loader 0.5s infinite alternate`,
+  backgroundColor: theme.palette.text.secondary,
+  width: '0.5rem',
+  height: '0.5rem',
+  borderRadius: '50%',
+  opacity: 1,
+  '@keyframes bouncing-loader': {
+    from: {
+      opacity: 0.1,
+      transform: 'translateY(0.2rem)',
+    },
+    to: {
+      opacity: 1,
+      transform: 'translateY(0.7rem)',
+    }
+  }
+}));
